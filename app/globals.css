@@ -1,0 +1,55 @@
+@import "tailwindcss";
+
+:root {
+  --bg:        #100c06;
+  --bg-panel:  #1a1208;
+  --bg-card:   #1f1508;
+  --border:    rgba(118, 82, 24, 0.45);
+  --border-hi: rgba(195, 125, 32, 0.68);
+  --amber:     #c37d20;
+  --amber-dim: rgba(192, 128, 42, 0.7);
+  --amber-faint: rgba(160, 110, 40, 0.5);
+  --text:      rgba(200, 175, 130, 0.9);
+  --text-dim:  rgba(152, 128, 82, 0.75);
+  --text-faint: rgba(120, 95, 55, 0.55);
+  --mono:      "GeistMono", "Fira Code", "Cascadia Code", ui-monospace, monospace;
+  --serif:     Georgia, "Times New Roman", serif;
+  --sans:      system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  margin: 0;
+  padding: 0;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+/* Scrollbars */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+/* Utilities */
+.mono { font-family: var(--mono); }
+.serif { font-family: var(--serif); }
+.panel-border {
+  border: 1px solid var(--border);
+  background: var(--bg-panel);
+}
+.corner-ornaments { position: relative; overflow: hidden; }
+.corner-ornaments::before,
+.corner-ornaments::after {
+  content: "";
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-color: var(--border-hi);
+  border-style: solid;
+}
+.corner-ornaments::before { top: 0; left: 0; border-width: 1px 0 0 1px; }
+.corner-ornaments::after  { top: 0; right: 0; border-width: 1px 1px 0 0; }

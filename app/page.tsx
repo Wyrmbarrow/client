@@ -2,19 +2,9 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { WORLD_RULES, DEFAULT_CHARACTER_BRIEF } from "@/lib/system-prompt"
 
-const DEFAULT_SYSTEM_PROMPT = `You are playing as {character_name} in Wyrmbarrow: The Great Ascent — a dark fantasy world built inside the skeleton of a dead god.
-
-Your goals:
-- Explore your surroundings carefully. Note anything unusual.
-- Write journal entries regularly to document significant events and observations.
-- Build relationships with the inhabitants of Wyrmbarrow through conversation.
-- Survive. Avoid combat you cannot win.
-
-Your approach:
-- Move thoughtfully. Look before acting.
-- Speak to NPCs to learn about the world and available work.
-- The bone remembers those who move carefully.`
+const DEFAULT_SYSTEM_PROMPT = `${WORLD_RULES}\n\n${DEFAULT_CHARACTER_BRIEF}`
 
 type Tab = "existing" | "new"
 

@@ -21,6 +21,7 @@ import { streamText, stepCountIs } from "ai"
 import { createOpenAI } from "@ai-sdk/openai"
 import { createMCPClient } from "@ai-sdk/mcp"
 import { parseCharacterState, parseRoomState } from "@/lib/parse-state"
+import { parseMcpResult } from "@/lib/parse-mcp-result"
 import type { AgentEvent } from "@/lib/types"
 
 const MCP_URL = process.env.WYRMBARROW_MCP_URL ?? "https://mcp.wyrmbarrow.com/mcp"
@@ -118,7 +119,8 @@ export async function POST(req: NextRequest) {
           onStepFinish({ toolResults }) {
             for (const tr of toolResults ?? []) {
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              const output = (tr as any).result ?? (tr as any).output
+              const raw = (tr as any).result ?? (tr as any).output
+              const output = parseMcpResult(raw)
               const charState = parseCharacterState(tr.toolName, output)
               if (charState) send({ type: "state", state: charState })
 
@@ -163,8 +165,8 @@ export async function POST(req: NextRequest) {
 
             case "tool-result": {
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              const toolOutput = (chunk as any).result ?? (chunk as any).output
-              send({ type: "tool_result", tool: chunk.toolName, result: toolOutput })
+              const raw = (chunk as any).result ?? (chunk as any).output
+              send({ type: "tool_result", tool: chunk.toolName, result: parseMcpResult(raw) })
             }
               break
 

@@ -8,30 +8,7 @@
 
 import { NextRequest, NextResponse } from "next/server"
 import { createWyrmbarrowMCPClient } from "@/lib/mcp"
-
-/**
- * MCP tool execute() can return:
- *   - a plain object (already parsed)
- *   - a JSON string
- *   - an MCP CallToolResult: { content: [{ type: "text", text: "...json..." }] }
- */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function parseMcpResult(result: unknown): any {
-  if (typeof result === "string") {
-    try { return JSON.parse(result) } catch { return { error: result } }
-  }
-  // MCP CallToolResult format
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const r = result as any
-  if (r?.content?.[0]?.text) {
-    const text = r.content[0].text
-    if (typeof text === "string") {
-      try { return JSON.parse(text) } catch { return { error: text } }
-    }
-    return text
-  }
-  return result
-}
+import { parseMcpResult } from "@/lib/parse-mcp-result"
 
 export async function POST(req: NextRequest) {
   const body = await req.json()

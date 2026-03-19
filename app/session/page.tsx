@@ -20,6 +20,7 @@ interface SessionConfig {
   model:         string
   systemPrompt:  string
   bootstrap?:    unknown
+  noToolChoice?: boolean
 }
 
 function readConfig(): SessionConfig | null {
@@ -113,6 +114,7 @@ export default function SessionPage() {
       nudge:        nudge    || undefined,
       // Only send bootstrap on first run
       bootstrap:    isResume ? undefined : config.bootstrap,
+      noToolChoice: config.noToolChoice ?? false,
     }
 
     try {

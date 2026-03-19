@@ -25,6 +25,7 @@ export default function SetupPage() {
   const [model, setModel] = useState(saved.model ?? "")
   const [modelsLoading, setModelsLoading] = useState(false)
   const [modelsError, setModelsError] = useState("")
+  const [noToolChoice, setNoToolChoice] = useState<boolean>(saved.noToolChoice === "true")
 
   const [charName, setCharName] = useState(saved.charName ?? "")
   const [password, setPassword] = useState(saved.password ?? "")
@@ -97,7 +98,7 @@ export default function SetupPage() {
         sessionId: data.sessionId,
         characterName: data.characterName,
         bootstrap: data.bootstrap ?? null,
-        llmBase, llmKey, model, systemPrompt,
+        llmBase, llmKey, model, systemPrompt, noToolChoice,
       }))
       router.push("/session")
     } catch (e) {
@@ -210,6 +211,22 @@ export default function SetupPage() {
                 <p className="mono text-[9px]" style={{ color: "#c0504a" }}>{modelsError}</p>
               )}
             </div>
+
+            {/* Tool choice compat toggle */}
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={noToolChoice}
+                onChange={e => { setNoToolChoice(e.target.checked); save({ noToolChoice: String(e.target.checked) }) }}
+                style={{ accentColor: "var(--amber)" }}
+              />
+              <span className="mono text-[9px] tracking-wide" style={{ color: "var(--text-faint)" }}>
+                Omit tool_choice parameter
+                <span style={{ color: "rgba(100,65,15,0.5)", marginLeft: "0.4em" }}>
+                  (vLLM without --enable-auto-tool-choice)
+                </span>
+              </span>
+            </label>
           </div>
         </section>
 

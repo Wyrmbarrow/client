@@ -38,6 +38,7 @@ export async function POST(req: NextRequest) {
     directive,
     nudge,
     bootstrap,
+    noToolChoice,
   } = await req.json()
 
   const encoder = new TextEncoder()
@@ -59,7 +60,21 @@ export async function POST(req: NextRequest) {
         const tools = await mcpClient.tools()
 
         // LLM provider — any OpenAI-compat endpoint
-        const provider = createOpenAI({ baseURL: llmBase.trim(), apiKey: llmKey.trim(), compatibility: "compatible" })
+        // Some servers (vLLM without --enable-auto-tool-choice) reject tool_choice: "auto".
+        // When noToolChoice is set, we strip the field so the model decides based on training.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const provider = createOpenAI({ baseURL: llmBase.trim(), apiKey: llmKey.trim(), compatibility: "compatible", ...(noToolChoice && {
+          fetch: async (url: RequestInfo | URL, options?: RequestInit) => {
+            if (options?.body) {
+              try {
+                const body = JSON.parse(options.body as string)
+                delete body.tool_choice
+                return fetch(url, { ...options, body: JSON.stringify(body) })
+              } catch { /* fall through */ }
+            }
+            return fetch(url, options)
+          },
+        }) } as Parameters<typeof createOpenAI>[0])
         // .chat() forces /v1/chat/completions — provider(model) now defaults to /v1/responses in v3
 
         // Build system prompt, injecting active directive if present

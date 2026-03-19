@@ -7,6 +7,7 @@ import CharacterPanel from "@/components/panels/CharacterPanel"
 import RoomPanel     from "@/components/panels/RoomPanel"
 import PatronInput   from "@/components/panels/PatronInput"
 import type { AgentEvent, CharacterState, FeedEntry, RoomState } from "@/lib/types"
+import { parseCharacterState } from "@/lib/parse-state"
 
 // ---------------------------------------------------------------------------
 // Session config (read from sessionStorage — set on setup page)
@@ -62,7 +63,7 @@ export default function SessionPage() {
   // Pending input for the next tool_result so we can pair input with result
   const pendingInputRef = useRef<Record<string, Record<string, unknown>>>({})
 
-  // Load session config on mount
+  // Load session config on mount; pre-populate panels from bootstrap
   useEffect(() => {
     const cfg = readConfig()
     if (!cfg) {
@@ -70,6 +71,28 @@ export default function SessionPage() {
       return
     }
     setConfig(cfg)
+
+    // Populate CHARACTER and LOCATION panels immediately from login bootstrap
+    // so they're not empty while the agent runs its first look().
+    if (cfg.bootstrap) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const b = cfg.bootstrap as any
+      const charState = parseCharacterState("init", { character: b.character })
+      if (charState) setCharState(charState)
+
+      const loc = b.location
+      if (loc) {
+        setRoomState({
+          name:        loc.name ?? "Unknown",
+          hub:         loc.hub,
+          isSanctuary: Boolean(loc.is_sanctuary),
+          exits:       [],
+          npcs:        [],
+          characters:  [],
+          objects:     [],
+        })
+      }
+    }
   }, [router])
 
   // ---------------------------------------------------------------------------

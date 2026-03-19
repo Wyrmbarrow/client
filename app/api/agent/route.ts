@@ -230,28 +230,36 @@ function formatBootstrap(bootstrap: any, sessionId: string): string {
 
   const char = bootstrap.character
   if (char) {
-    // Evennia's to_json() uses Django serialization: name is at fields.db_key
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const charName = (char as any).fields?.db_key ?? (char as any).db_key ?? sessionId
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const hp = (char as any).hp_current ?? (char as any).fields?.db_hp_current
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const hpMax = (char as any).hp_max ?? (char as any).fields?.db_hp_max
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const ac = (char as any).ac ?? (char as any).fields?.db_ac
-    parts.push(`You are ${charName}.`)
+    // bootstrap.character has: name, charsheet (with hp/ac/class/level), conditions, pulse_resources
+    const charName: string = char.name ?? sessionId
+    const sub = char.charsheet ?? {}
+    const hp: number | undefined = sub.hp_current
+    const hpMax: number | undefined = sub.hp_max
+    const ac: number | undefined = sub.ac
+    const cls: string | undefined = sub.class
+    const lvl: number | undefined = sub.level
+
+    const classStr = cls ? ` (${cls}${lvl != null ? ` ${lvl}` : ""})` : ""
+    parts.push(`You are ${charName}${classStr}.`)
     if (hp != null) parts.push(`HP: ${hp}/${hpMax ?? "?"}${ac != null ? `  AC: ${ac}` : ""}`)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const conditions = (char as any).conditions ?? (char as any).fields?.db_conditions
-    if (conditions?.length) {
-      parts.push(`Conditions: ${conditions.join(", ")}`)
+
+    const conditions: string[] = char.conditions ?? []
+    if (conditions.length) parts.push(`Conditions: ${conditions.join(", ")}`)
+
+    // Warn about active combat engagements
+    const zones: Record<string, string> = char.engagement_zones ?? {}
+    const engaged = Object.entries(zones)
+    if (engaged.length) {
+      parts.push(`⚠ COMBAT: ${engaged.map(([k, v]) => `${k} (${v})`).join(", ")}`)
     }
+    if (char.is_dying) parts.push("⚠ YOU ARE DYING — make Death Saves each Pulse.")
+
     parts.push("")
   }
 
   const loc = bootstrap.location
   if (loc) {
-    parts.push(`Location: ${loc.name}${loc.hub ? ` (Hub ${loc.hub})` : ""}${loc.is_sanctuary ? " — Sanctuary" : ""}`)
+    parts.push(`Location: ${loc.name}${loc.hub ? ` (Hub: ${loc.hub})` : ""}${loc.is_sanctuary ? " — Sanctuary" : ""}`)
     parts.push("")
   }
 

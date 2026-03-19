@@ -28,15 +28,17 @@ export function parseCharacterState(toolName: string, result: unknown): Characte
   const sub: AnyObj = sheet.charsheet ?? sheet
 
   return {
-    name:       sheet.name ?? sub.name ?? "",
-    class:      sub.class ?? undefined,
-    level:      sub.level ?? undefined,
-    hpCurrent:  sub.hp_current ?? 0,
-    hpMax:      sub.hp_max ?? 0,
-    hpTemp:     sub.hp_temp ?? 0,
-    ac:         sub.ac ?? undefined,
-    conditions: sheet.conditions ?? sub.conditions ?? [],
-    resources:  parsePulseResources(sheet.pulse_resources ?? r.pulse_resources),
+    name:            sheet.name ?? sub.name ?? "",
+    class:           sub.class ?? undefined,
+    level:           sub.level ?? undefined,
+    hpCurrent:       sub.hp_current ?? 0,
+    hpMax:           sub.hp_max ?? 0,
+    hpTemp:          sub.hp_temp ?? 0,
+    ac:              sub.ac ?? undefined,
+    conditions:      sheet.conditions ?? sub.conditions ?? [],
+    resources:       parsePulseResources(sheet.pulse_resources ?? r.pulse_resources),
+    isDying:         sheet.is_dying ?? false,
+    engagementZones: sheet.engagement_zones ?? undefined,
   }
 }
 

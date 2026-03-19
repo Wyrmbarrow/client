@@ -29,6 +29,9 @@ export interface CharacterState {
   ac?: number
   conditions?: string[]
   resources?: PulseResources
+  isDying?: boolean
+  /** e.g. { "wolf-l6vt": "near" } */
+  engagementZones?: Record<string, string>
 }
 
 export interface PulseResources {

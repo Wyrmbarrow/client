@@ -20,7 +20,7 @@ export default function CharacterPanel({ state }: Props) {
     )
   }
 
-  const { name, class: cls, level, hpCurrent, hpMax, hpTemp, ac, conditions, resources } = state
+  const { name, class: cls, level, hpCurrent, hpMax, hpTemp, ac, conditions, resources, isDying, engagementZones } = state
   const hpPct = hpMax > 0 ? Math.max(0, Math.min(1, hpCurrent / hpMax)) : 0
   const hpColor = hpPct > 0.6 ? "rgba(80,160,90,0.8)" : hpPct > 0.3 ? "rgba(200,160,60,0.8)" : "#c0504a"
 
@@ -68,6 +68,17 @@ export default function CharacterPanel({ state }: Props) {
       {/* Pulse resources */}
       {resources && <PulseBar resources={resources} />}
 
+      {/* Dying warning */}
+      {isDying && (
+        <div className="mono text-[9px] px-2 py-1 tracking-wide uppercase" style={{
+          background: "rgba(180,60,50,0.2)",
+          border: "1px solid rgba(180,60,50,0.5)",
+          color: "#c0504a",
+        }}>
+          ⚠ Dying — Death Saves active
+        </div>
+      )}
+
       {/* Conditions */}
       {conditions && conditions.length > 0 && (
         <div className="flex flex-wrap gap-1">
@@ -79,6 +90,23 @@ export default function CharacterPanel({ state }: Props) {
             }}>
               {c}
             </span>
+          ))}
+        </div>
+      )}
+
+      {/* Engagement zones */}
+      {engagementZones && Object.keys(engagementZones).length > 0 && (
+        <div className="space-y-0.5">
+          <span className="mono text-[9px] tracking-widest uppercase" style={{ color: "var(--text-faint)" }}>In Combat</span>
+          {Object.entries(engagementZones).map(([ref, zone]) => (
+            <div key={ref} className="flex items-center justify-between">
+              <span className="mono text-[9px]" style={{ color: "#c0504a" }}>{ref.replace(/-[a-z0-9]+$/, "")}</span>
+              <span className="mono text-[8px] uppercase tracking-wide px-1" style={{
+                background: "rgba(180,60,50,0.12)",
+                border: "1px solid rgba(180,60,50,0.25)",
+                color: "rgba(192,80,74,0.8)",
+              }}>{zone}</span>
+            </div>
           ))}
         </div>
       )}

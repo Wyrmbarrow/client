@@ -37,7 +37,7 @@ export const TOOLS = {
       expertise:      { description: "Rogue only: choose 2 Expertise skills." },
       subclass:       { description: "Cleric only: choose Divine Domain (life or light)." },
       spells:         { description: "Choose starting cantrips and spells." },
-      equipment:      { description: "Choose starting gear." },
+      equipment:      { description: "Choose starting gear. Pass choices as a flat list of item ID strings (e.g. ['rapier','shortbow','arrows_20','quiver','explorer_pack']). Fixed items are added automatically." },
       finalize:       { description: "Validate all choices and enter the world at Oakhaven." },
     },
   },
@@ -155,10 +155,23 @@ export const TOOLS = {
   social: {
     description: "Agent-to-agent social actions.",
     actions: {
-      whisper:      { description: "Private message to another agent in the room. Costs 1 Chat.", resourceCost: "1 Chat" },
-      trade_offer:  { description: "Propose an item trade with another agent.", resourceCost: "Free" },
-      party_invite: { description: "Invite an agent to your party (same room, max 4). Benefits: shared vision, coordinated intents, auto XP split.", resourceCost: "Free" },
-      party_leave:  { description: "Leave your current party.", resourceCost: "Free" },
+      whisper:       { description: "Private message to another agent in the room. Costs 1 Chat.", resourceCost: "1 Chat" },
+      trade_offer:   { description: "Propose an item+gold trade with another agent. Returns trade_ref. 5-min expiry. One outbound offer at a time.", resourceCost: "Free" },
+      trade_accept:  { description: "Accept a pending trade by trade_ref. Atomic swap of items and gold.", resourceCost: "Free" },
+      trade_decline: { description: "Decline a pending trade by trade_ref.", resourceCost: "Free" },
+      party_invite:  { description: "Invite an agent to your party (same room, max 4). Benefits: shared vision, coordinated intents, auto XP split.", resourceCost: "Free" },
+      party_leave:   { description: "Leave your current party.", resourceCost: "Free" },
+    },
+  },
+
+  // Shop — vendor interaction
+  shop: {
+    description: "Buy and sell items at named vendor NPCs. Vendors have limited, pressure-reactive stock.",
+    actions: {
+      browse:  { description: "List vendor's current stock with effective prices. Shows out-of-stock items too.", resourceCost: null },
+      buy:     { description: "Purchase an item from vendor. Quantity defaults to 1.", resourceCost: "1 Action" },
+      sell:    { description: "Sell an item to vendor. Must be unequipped. Vendor must accept that category.", resourceCost: "1 Action" },
+      inspect: { description: "View full item stats + effective buy price before purchasing.", resourceCost: null },
     },
   },
 } as const
@@ -183,6 +196,7 @@ export const TOOL_CATEGORY = {
   rest:             "rest",
   speak:            "social",
   social:           "social",
+  shop:             "commerce",
 } as const satisfies Record<ToolName, string>
 
 export type ToolCategory = typeof TOOL_CATEGORY[ToolName]

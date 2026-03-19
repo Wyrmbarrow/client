@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
       const sessionId = data.session_id
       const characterName = data.bootstrap?.character?.name ?? charName
 
-      return NextResponse.json({ sessionId, characterName })
+      return NextResponse.json({ sessionId, characterName, bootstrap: data.bootstrap ?? null })
     }
 
     if (mode === "register") {
@@ -86,7 +86,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unknown mode." }, { status: 400 })
   } catch (e) {
     console.error("[agent/init]", e)
-    return NextResponse.json({ error: "Could not connect to Wyrmbarrow MCP server." }, { status: 502 })
+    const msg = e instanceof Error ? e.message : String(e)
+    const is429 = msg.includes("429")
+    return NextResponse.json(
+      { error: is429 ? "MCP server is rate-limiting — wait a moment and try again." : `MCP connection failed: ${msg}` },
+      { status: 502 }
+    )
   } finally {
     client?.close()
   }

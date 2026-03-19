@@ -16,10 +16,11 @@ export async function GET(req: NextRequest) {
 
     const data = await res.json()
     // OpenAI-compat: { data: [ { id: "..." }, ... ] }
-    const models: string[] = (data.data ?? data.models ?? [])
-      .map((m: { id?: string; name?: string }) => m.id ?? m.name ?? "")
-      .filter(Boolean)
-      .sort()
+    const models: string[] = [...new Set<string>(
+      (data.data ?? data.models ?? [])
+        .map((m: { id?: string; name?: string }) => m.id ?? m.name ?? "")
+        .filter(Boolean)
+    )].sort()
 
     return NextResponse.json({ models })
   } catch (e) {

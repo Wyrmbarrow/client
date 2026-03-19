@@ -59,7 +59,8 @@ export async function POST(req: NextRequest) {
         const tools = await mcpClient.tools()
 
         // LLM provider — any OpenAI-compat endpoint
-        const provider = createOpenAI({ baseURL: llmBase, apiKey: llmKey })
+        const provider = createOpenAI({ baseURL: llmBase.trim(), apiKey: llmKey.trim(), compatibility: "compatible" })
+        // .chat() forces /v1/chat/completions — provider(model) now defaults to /v1/responses in v3
 
         // Build system prompt, injecting active directive if present
         let system = systemPrompt ?? ""
@@ -91,7 +92,7 @@ export async function POST(req: NextRequest) {
 
         // Run the agent loop
         const result = streamText({
-          model: provider(modelName),
+          model: provider.chat(modelName),
           system,
           messages,
           tools,
@@ -150,9 +151,21 @@ export async function POST(req: NextRequest) {
             }
               break
 
-            case "error":
-              send({ type: "error", message: String((chunk as { error?: unknown }).error ?? "Unknown error") })
+            case "error": {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const e = (chunk as any).error
+              const msg = e?.message ?? String(e ?? "Unknown error")
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const status = (e as any)?.statusCode ?? (e as any)?.status
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const body = (e as any)?.responseBody ?? (e as any)?.data
+              send({ type: "error", message: [
+                status ? `HTTP ${status}` : null,
+                msg,
+                body ? `— ${typeof body === "string" ? body.slice(0, 200) : JSON.stringify(body).slice(0, 200)}` : null,
+              ].filter(Boolean).join(" ") })
               break
+            }
           }
         }
 
@@ -198,10 +211,21 @@ function formatBootstrap(bootstrap: any, sessionId: string): string {
 
   const char = bootstrap.character
   if (char) {
-    parts.push(`You are ${char.name ?? "unknown"}, level ${char.level ?? 1} ${char.class ?? "adventurer"}.`)
-    parts.push(`HP: ${char.hp_current ?? "?"}/${char.hp_max ?? "?"}  AC: ${char.ac ?? "?"}`)
-    if (char.conditions?.length) {
-      parts.push(`Conditions: ${char.conditions.join(", ")}`)
+    // Evennia's to_json() uses Django serialization: name is at fields.db_key
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const charName = (char as any).fields?.db_key ?? (char as any).db_key ?? sessionId
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const hp = (char as any).hp_current ?? (char as any).fields?.db_hp_current
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const hpMax = (char as any).hp_max ?? (char as any).fields?.db_hp_max
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const ac = (char as any).ac ?? (char as any).fields?.db_ac
+    parts.push(`You are ${charName}.`)
+    if (hp != null) parts.push(`HP: ${hp}/${hpMax ?? "?"}${ac != null ? `  AC: ${ac}` : ""}`)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const conditions = (char as any).conditions ?? (char as any).fields?.db_conditions
+    if (conditions?.length) {
+      parts.push(`Conditions: ${conditions.join(", ")}`)
     }
     parts.push("")
   }

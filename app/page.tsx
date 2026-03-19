@@ -1,32 +1,46 @@
 "use client"
 
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { WORLD_RULES, DEFAULT_CHARACTER_BRIEF } from "@/lib/system-prompt"
 
 const DEFAULT_SYSTEM_PROMPT = `${WORLD_RULES}\n\n${DEFAULT_CHARACTER_BRIEF}`
+const LS_KEY = "wyrmbarrow_setup"
+
+function loadSaved() {
+  try { return JSON.parse(localStorage.getItem(LS_KEY) ?? "{}") } catch { return {} }
+}
 
 type Tab = "existing" | "new"
 
 export default function SetupPage() {
   const router = useRouter()
-  const [tab, setTab] = useState<Tab>("existing")
-  const [llmBase, setLlmBase] = useState("http://localhost:11434/v1")
-  const [llmKey, setLlmKey] = useState("ollama")
+  const saved = typeof window !== "undefined" ? loadSaved() : {}
+
+  const [tab, setTab] = useState<Tab>(saved.tab ?? "existing")
+  function setTabAndSave(t: Tab) { setTab(t); save({ tab: t }) }
+  const [llmBase, setLlmBase] = useState(saved.llmBase ?? "http://localhost:11434/v1")
+  const [llmKey, setLlmKey] = useState(saved.llmKey ?? "ollama")
   const [models, setModels] = useState<string[]>([])
-  const [model, setModel] = useState("")
+  const [model, setModel] = useState(saved.model ?? "")
   const [modelsLoading, setModelsLoading] = useState(false)
   const [modelsError, setModelsError] = useState("")
 
-  const [charName, setCharName] = useState("")
-  const [password, setPassword] = useState("")
-  const [regCode, setRegCode] = useState("")
-  const [newCharName, setNewCharName] = useState("")
+  const [charName, setCharName] = useState(saved.charName ?? "")
+  const [password, setPassword] = useState(saved.password ?? "")
+  const [regCode, setRegCode] = useState(saved.regCode ?? "")
+  const [newCharName, setNewCharName] = useState(saved.newCharName ?? "")
 
-  const [systemPrompt, setSystemPrompt] = useState(DEFAULT_SYSTEM_PROMPT)
+  const [systemPrompt, setSystemPrompt] = useState(saved.systemPrompt ?? DEFAULT_SYSTEM_PROMPT)
+
+  function save(patch: Record<string, string>) {
+    try { localStorage.setItem(LS_KEY, JSON.stringify({ ...loadSaved(), ...patch })) } catch { /* ignore */ }
+  }
   const [showPrompt, setShowPrompt] = useState(false)
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
+  const [cooldown, setCooldown] = useState(false)
+  const lastAttemptRef = useRef(0)
 
   async function fetchModels() {
     if (!llmBase) return
@@ -38,6 +52,7 @@ export default function SetupPage() {
       if (data.models?.length) {
         setModels(data.models)
         setModel(data.models[0])
+        save({ model: data.models[0] })
       } else {
         setModelsError("No models found at that endpoint.")
       }
@@ -51,6 +66,17 @@ export default function SetupPage() {
   async function handleBegin() {
     setError("")
     if (!model) { setError("Select a model first."); return }
+
+    const now = Date.now()
+    const elapsed = now - lastAttemptRef.current
+    if (elapsed < 2000) {
+      const wait = Math.ceil((2000 - elapsed) / 1000)
+      setError(`Please wait ${wait}s before trying again.`)
+      return
+    }
+    lastAttemptRef.current = now
+    setCooldown(true)
+    setTimeout(() => setCooldown(false), 2000)
 
     setLoading(true)
     try {
@@ -70,6 +96,7 @@ export default function SetupPage() {
       sessionStorage.setItem("wyrmbarrow_session", JSON.stringify({
         sessionId: data.sessionId,
         characterName: data.characterName,
+        bootstrap: data.bootstrap ?? null,
         llmBase, llmKey, model, systemPrompt,
       }))
       router.push("/session")
@@ -117,7 +144,7 @@ export default function SetupPage() {
               </label>
               <input
                 value={llmBase}
-                onChange={e => setLlmBase(e.target.value)}
+                onChange={e => { setLlmBase(e.target.value); save({ llmBase: e.target.value }) }}
                 onBlur={fetchModels}
                 placeholder="http://localhost:11434/v1"
                 className="w-full mono text-xs px-3 py-2"
@@ -134,7 +161,7 @@ export default function SetupPage() {
               </label>
               <input
                 value={llmKey}
-                onChange={e => setLlmKey(e.target.value)}
+                onChange={e => { setLlmKey(e.target.value); save({ llmKey: e.target.value }) }}
                 type="password"
                 placeholder="sk-... or 'ollama'"
                 className="w-full mono text-xs px-3 py-2"
@@ -158,7 +185,7 @@ export default function SetupPage() {
               {models.length > 0 ? (
                 <select
                   value={model}
-                  onChange={e => setModel(e.target.value)}
+                  onChange={e => { setModel(e.target.value); save({ model: e.target.value }) }}
                   className="w-full mono text-xs px-3 py-2"
                   style={{
                     background: "var(--bg-card)", border: "1px solid var(--border)",
@@ -170,7 +197,7 @@ export default function SetupPage() {
               ) : (
                 <input
                   value={model}
-                  onChange={e => setModel(e.target.value)}
+                  onChange={e => { setModel(e.target.value); save({ model: e.target.value }) }}
                   placeholder="Enter model name or fetch from endpoint"
                   className="w-full mono text-xs px-3 py-2"
                   style={{
@@ -197,7 +224,7 @@ export default function SetupPage() {
             {(["existing", "new"] as Tab[]).map(t => (
               <button
                 key={t}
-                onClick={() => setTab(t)}
+                onClick={() => setTabAndSave(t)}
                 className="flex-1 mono text-[9px] tracking-[0.3em] uppercase py-2"
                 style={{
                   background: tab === t ? "rgba(118,82,24,0.25)" : "transparent",
@@ -212,13 +239,13 @@ export default function SetupPage() {
 
           {tab === "existing" ? (
             <div className="space-y-3">
-              <InputField label="Character Name" value={charName} onChange={setCharName} />
-              <InputField label="Password" value={password} onChange={setPassword} type="password" />
+              <InputField label="Character Name" value={charName} onChange={v => { setCharName(v); save({ charName: v }) }} />
+              <InputField label="Password" value={password} onChange={v => { setPassword(v); save({ password: v }) }} type="password" />
             </div>
           ) : (
             <div className="space-y-3">
-              <InputField label="Registration Code" value={regCode} onChange={setRegCode} mono />
-              <InputField label="Character Name" value={newCharName} onChange={setNewCharName} />
+              <InputField label="Registration Code" value={regCode} onChange={v => { setRegCode(v); save({ regCode: v }) }} mono />
+              <InputField label="Character Name" value={newCharName} onChange={v => { setNewCharName(v); save({ newCharName: v }) }} />
             </div>
           )}
         </section>
@@ -239,7 +266,7 @@ export default function SetupPage() {
           {showPrompt && (
             <textarea
               value={systemPrompt}
-              onChange={e => setSystemPrompt(e.target.value)}
+              onChange={e => { setSystemPrompt(e.target.value); save({ systemPrompt: e.target.value }) }}
               rows={10}
               className="w-full mono text-[11px] px-3 py-2 resize-y"
               style={{
@@ -258,16 +285,16 @@ export default function SetupPage() {
         {/* Begin */}
         <button
           onClick={handleBegin}
-          disabled={loading}
+          disabled={loading || cooldown}
           className="w-full py-3 mono text-xs tracking-[0.3em] uppercase"
           style={{
-            background: loading ? "rgba(118,82,24,0.15)" : "rgba(118,82,24,0.3)",
+            background: (loading || cooldown) ? "rgba(118,82,24,0.15)" : "rgba(118,82,24,0.3)",
             border: "1px solid var(--border-hi)",
-            color: loading ? "var(--text-faint)" : "var(--amber)",
-            cursor: loading ? "not-allowed" : "pointer",
+            color: (loading || cooldown) ? "var(--text-faint)" : "var(--amber)",
+            cursor: (loading || cooldown) ? "not-allowed" : "pointer",
           }}
         >
-          {loading ? "Connecting..." : "Begin"}
+          {loading ? "Connecting..." : cooldown ? "Wait…" : "Begin"}
         </button>
 
       </div>

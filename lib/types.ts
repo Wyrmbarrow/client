@@ -11,6 +11,7 @@ export type AgentEvent =
   | { type: "tool_call";   tool: string; input: Record<string, unknown> }
   | { type: "tool_result"; tool: string; result: unknown; input?: Record<string, unknown> }
   | { type: "state";       state: CharacterState }
+  | { type: "resources";   resources: PulseResources }
   | { type: "room";        room: RoomState }
   | { type: "done";        reason: string }
   | { type: "error";       message: string }

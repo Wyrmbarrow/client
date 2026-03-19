@@ -124,6 +124,18 @@ export async function POST(req: NextRequest) {
               const charState = parseCharacterState(tr.toolName, output)
               if (charState) send({ type: "state", state: charState })
 
+              // move results have pulse_resources at top level but no character sheet
+              if (!charState && output.pulse_resources) {
+                const pr = output.pulse_resources as Record<string, number>
+                send({ type: "resources", resources: {
+                  action:       pr.action       ?? 0,
+                  movement:     pr.movement      ?? 0,
+                  bonus_action: pr.bonus_action  ?? 0,
+                  reaction:     pr.reaction      ?? 0,
+                  chat:         pr.chat          ?? 0,
+                }})
+              }
+
               const roomState = parseRoomState(tr.toolName, output)
               if (roomState) send({ type: "room", room: roomState })
             }

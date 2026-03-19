@@ -185,6 +185,10 @@ export default function SessionPage() {
             setCharState(event.state)
             continue // don't add state/room to visual feed
           }
+          if (event.type === "resources") {
+            setCharState(prev => prev ? { ...prev, resources: event.resources } : prev)
+            continue
+          }
           if (event.type === "room") {
             setRoomState(event.room)
             continue

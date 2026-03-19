@@ -104,6 +104,7 @@ export default function SetupPage() {
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error || "Failed to connect."); return }
+      if (!data.sessionId) { setError("Server returned no session ID. Check browser console for details."); return }
 
       // Store session config in sessionStorage — cleared when tab closes
       sessionStorage.setItem("wyrmbarrow_session", JSON.stringify({

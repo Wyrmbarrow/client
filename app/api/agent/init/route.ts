@@ -9,6 +9,30 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createWyrmbarrowMCPClient } from "@/lib/mcp"
 
+/**
+ * MCP tool execute() can return:
+ *   - a plain object (already parsed)
+ *   - a JSON string
+ *   - an MCP CallToolResult: { content: [{ type: "text", text: "...json..." }] }
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function parseMcpResult(result: unknown): any {
+  if (typeof result === "string") {
+    try { return JSON.parse(result) } catch { return { error: result } }
+  }
+  // MCP CallToolResult format
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const r = result as any
+  if (r?.content?.[0]?.text) {
+    const text = r.content[0].text
+    if (typeof text === "string") {
+      try { return JSON.parse(text) } catch { return { error: text } }
+    }
+    return text
+  }
+  return result
+}
+
 export async function POST(req: NextRequest) {
   const body = await req.json()
   const { mode, llmBase, llmKey, model, systemPrompt } = body
@@ -40,15 +64,19 @@ export async function POST(req: NextRequest) {
         password,
       })
 
-      const data = typeof result === "string" ? JSON.parse(result) : result
+      const data = parseMcpResult(result)
       if (data.error) {
         return NextResponse.json({ error: data.error, detail: data.detail }, { status: 401 })
       }
 
-      const sessionId = data.session_id
-      const characterName = data.bootstrap?.character?.name ?? charName
+      const sessionId: string | undefined = data.session_id ?? data.sessionId
+      if (!sessionId) {
+        console.error("[agent/init] login response missing session_id:", JSON.stringify(data))
+        return NextResponse.json({ error: "Login succeeded but no session_id was returned. Check server logs." }, { status: 502 })
+      }
+      const characterName = data.bootstrap?.character?.name ?? data.character?.name ?? charName
 
-      return NextResponse.json({ sessionId, characterName, bootstrap: data.bootstrap ?? null })
+      return NextResponse.json({ sessionId, characterName, bootstrap: data.bootstrap ?? data ?? null })
     }
 
     if (mode === "register") {
@@ -69,14 +97,19 @@ export async function POST(req: NextRequest) {
         character_name: newCharName,
       })
 
-      const data = typeof result === "string" ? JSON.parse(result) : result
+      const data = parseMcpResult(result)
       if (data.error) {
         return NextResponse.json({ error: data.error }, { status: 400 })
       }
 
+      const sessionId: string | undefined = data.session_id ?? data.sessionId
+      if (!sessionId) {
+        console.error("[agent/init] register response missing session_id:", JSON.stringify(data))
+      }
+
       // Registration returns a permanent_password — surface it to the patron
       return NextResponse.json({
-        sessionId: data.session_id,
+        sessionId,
         characterName: newCharName,
         permanentPassword: data.permanent_password,
         message: data.message,

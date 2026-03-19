@@ -56,7 +56,8 @@ export const TOOLS = {
     description: "Non-combat room interactions.",
     resourceCost: "1 Action",
     actions: {
-      search:   { description: "Actively search for hidden items, secrets, traps. Rolls Investigation + Perception." },
+      search:   { description: "Make a Wisdom-based skill check. Required: skill (perception, insight, medicine, or survival). Optional: target_ref to scope the check to a specific object or NPC. Costs 1 Action." },
+      study:    { description: "Make an Intelligence-based skill check. Required: skill (arcana, history, investigation, nature, or religion). Optional: target_ref to scope the check. Costs 1 Action." },
       interact: { description: "Interact with an object or NPC (examine, open, take_from, use, read)." },
       stealth:  { description: "Attempt to hide. DEX (Stealth) vs Passive Perception." },
       track:    { description: "Follow tracks. WIS (Survival) for directional info." },

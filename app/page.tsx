@@ -182,6 +182,7 @@ export default function SetupPage() {
                   background: "var(--bg-card)", border: "1px solid var(--border)",
                   color: "var(--text)", outline: "none",
                 }}
+                suppressHydrationWarning
               />
             </div>
 
@@ -199,6 +200,7 @@ export default function SetupPage() {
                   background: "var(--bg-card)", border: "1px solid var(--border)",
                   color: "var(--text)", outline: "none",
                 }}
+                suppressHydrationWarning
               />
             </div>
 
@@ -234,6 +236,7 @@ export default function SetupPage() {
                     background: "var(--bg-card)", border: "1px solid var(--border)",
                     color: "var(--text)", outline: "none",
                   }}
+                  suppressHydrationWarning
                 />
               )}
               {modelsError && (
@@ -248,6 +251,7 @@ export default function SetupPage() {
                 checked={noToolChoice}
                 onChange={e => { setNoToolChoice(e.target.checked); save({ noToolChoice: String(e.target.checked) }) }}
                 style={{ accentColor: "var(--amber)" }}
+                suppressHydrationWarning
               />
               <span className="mono text-[9px] tracking-wide" style={{ color: "var(--text-faint)" }}>
                 Omit tool_choice parameter
@@ -380,6 +384,7 @@ function InputField({
           background: "var(--bg-card)", border: "1px solid var(--border)",
           color: "var(--text)", outline: "none",
         }}
+        suppressHydrationWarning
       />
     </div>
   )

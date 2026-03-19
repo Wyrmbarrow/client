@@ -17,22 +17,26 @@ export function parseCharacterState(toolName: string, result: unknown): Characte
   if (!r || typeof r !== "object") return null
 
   // look / move return { character: { ... } } at top level
-  const cs = r.character ?? r.bootstrap?.character ?? r.charsheet ?? null
+  // char.to_json() returns { name, charsheet: { hp_current, hp_max, class, level, ac, ... }, pulse_resources, conditions, ... }
+  const cs = r.character ?? r.bootstrap?.character ?? null
 
-  // character(action="status") returns the charsheet directly
-  const sheet: AnyObj = cs ?? (r.hp_current !== undefined ? r : null)
+  // character(action="status") or direct charsheet access
+  const sheet: AnyObj = cs ?? (r.hp_current !== undefined || r.charsheet !== undefined ? r : null)
   if (!sheet) return null
 
+  // HP/class/level/AC may be in a nested charsheet or directly on the sheet
+  const sub: AnyObj = sheet.charsheet ?? sheet
+
   return {
-    name:       sheet.name ?? "",
-    class:      sheet.class ?? undefined,
-    level:      sheet.level ?? undefined,
-    hpCurrent:  sheet.hp_current ?? 0,
-    hpMax:      sheet.hp_max ?? 0,
-    hpTemp:     sheet.hp_temp ?? 0,
-    ac:         sheet.ac ?? undefined,
-    conditions: sheet.conditions ?? [],
-    resources:  parsePulseResources(r.pulse_resources ?? sheet.pulse_resources),
+    name:       sheet.name ?? sub.name ?? "",
+    class:      sub.class ?? undefined,
+    level:      sub.level ?? undefined,
+    hpCurrent:  sub.hp_current ?? 0,
+    hpMax:      sub.hp_max ?? 0,
+    hpTemp:     sub.hp_temp ?? 0,
+    ac:         sub.ac ?? undefined,
+    conditions: sheet.conditions ?? sub.conditions ?? [],
+    resources:  parsePulseResources(sheet.pulse_resources ?? r.pulse_resources),
   }
 }
 
@@ -63,13 +67,16 @@ export function parseRoomState(toolName: string, result: unknown): RoomState | n
   const exits: string[] = []
   if (Array.isArray(roomData.exits)) {
     for (const e of roomData.exits) {
-      exits.push(typeof e === "string" ? e : e.direction ?? e.name ?? String(e))
+      // room.get_exits() returns { key, aliases, destination } objects
+      exits.push(typeof e === "string" ? e : e.key ?? e.direction ?? e.name ?? String(e))
     }
   }
 
-  const npcs: string[] = extractNames(roomData.npcs)
-  const characters: string[] = extractNames(roomData.characters ?? roomData.agents)
-  const objects: string[] = extractNames(roomData.objects)
+  // Contents may be flat on roomData or nested under roomData.contents
+  const contents: AnyObj = roomData.contents ?? roomData
+  const npcs: string[] = extractNames(contents.npcs ?? roomData.npcs)
+  const characters: string[] = extractNames(contents.characters ?? contents.agents ?? roomData.characters ?? roomData.agents)
+  const objects: string[] = extractNames(contents.objects ?? roomData.objects)
 
   return {
     name:        roomData.name ?? roomData.key ?? "Unknown",

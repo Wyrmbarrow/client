@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { WORLD_RULES, DEFAULT_CHARACTER_BRIEF } from "@/lib/system-prompt"
 
@@ -27,24 +27,40 @@ type Tab = "existing" | "new"
 
 export default function SetupPage() {
   const router = useRouter()
-  const saved = typeof window !== "undefined" ? loadSaved() : {}
 
-  const [tab, setTab] = useState<Tab>(saved.tab ?? "existing")
+  // Initialize with stable defaults (SSR-safe).
+  // useEffect loads the real saved values after hydration to avoid mismatch.
+  const [tab, setTab] = useState<Tab>("existing")
   function setTabAndSave(t: Tab) { setTab(t); save({ tab: t }) }
-  const [llmBase, setLlmBase] = useState(saved.llmBase ?? "http://localhost:11434/v1")
-  const [llmKey, setLlmKey] = useState(saved.llmKey ?? "ollama")
+  const [llmBase, setLlmBase] = useState("http://localhost:11434/v1")
+  const [llmKey, setLlmKey] = useState("")
   const [models, setModels] = useState<string[]>([])
-  const [model, setModel] = useState(saved.model ?? "")
+  const [model, setModel] = useState("")
   const [modelsLoading, setModelsLoading] = useState(false)
   const [modelsError, setModelsError] = useState("")
-  const [noToolChoice, setNoToolChoice] = useState<boolean>(saved.noToolChoice === "true")
+  const [noToolChoice, setNoToolChoice] = useState(false)
 
-  const [charName, setCharName] = useState(saved.charName ?? "")
-  const [password, setPassword] = useState(saved.password ?? "")
-  const [regCode, setRegCode] = useState(saved.regCode ?? "")
-  const [newCharName, setNewCharName] = useState(saved.newCharName ?? "")
+  const [charName, setCharName] = useState("")
+  const [password, setPassword] = useState("")
+  const [regCode, setRegCode] = useState("")
+  const [newCharName, setNewCharName] = useState("")
 
-  const [systemPrompt, setSystemPrompt] = useState(saved.systemPrompt ?? DEFAULT_SYSTEM_PROMPT)
+  const [systemPrompt, setSystemPrompt] = useState(DEFAULT_SYSTEM_PROMPT)
+
+  // Restore persisted values after mount (runs only on client, after hydration).
+  useEffect(() => {
+    const s = loadSaved()
+    if (s.tab) setTab(s.tab as Tab)
+    if (s.llmBase) setLlmBase(s.llmBase)
+    if (s.llmKey) setLlmKey(s.llmKey)
+    if (s.model) setModel(s.model)
+    if (s.noToolChoice) setNoToolChoice(s.noToolChoice === "true")
+    if (s.charName) setCharName(s.charName)
+    if (s.password) setPassword(s.password)
+    if (s.regCode) setRegCode(s.regCode)
+    if (s.newCharName) setNewCharName(s.newCharName)
+    if (s.systemPrompt) setSystemPrompt(s.systemPrompt)
+  }, [])
 
   function save(patch: Record<string, string>) {
     try { localStorage.setItem(LS_KEY, JSON.stringify({ ...loadSaved(), ...patch })) } catch { /* ignore */ }

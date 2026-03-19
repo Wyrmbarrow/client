@@ -63,6 +63,11 @@ export default function SessionPage() {
   // Pending input for the next tool_result so we can pair input with result
   const pendingInputRef = useRef<Record<string, Record<string, unknown>>>({})
 
+  // Timestamps of the last time `look` and `character` were called (LLM or poll).
+  // Initialized to now so the poller doesn't fire during the first LLM turn.
+  const lastLookAt      = useRef<number>(Date.now())
+  const lastCharacterAt = useRef<number>(Date.now())
+
   // Load session config on mount; pre-populate panels from bootstrap
   useEffect(() => {
     const cfg = readConfig()
@@ -195,6 +200,9 @@ export default function SessionPage() {
           }
 
           if (event.type === "tool_call") {
+            // Track when the LLM calls look/character so the poller knows they're fresh
+            if (event.tool === "look")      lastLookAt.current      = Date.now()
+            if (event.tool === "character") lastCharacterAt.current = Date.now()
             // Store input keyed by tool name for pairing with result
             pendingInputRef.current[event.tool] = event.input
             // Don't add tool_call to feed — we render via tool_result
@@ -228,6 +236,51 @@ export default function SessionPage() {
       abortRef.current = null
     }
   }, [config, activeDirective])
+
+  // ---------------------------------------------------------------------------
+  // Background poller — refreshes panels independently of the LLM
+  // ---------------------------------------------------------------------------
+  // Every 3 s, call whichever of `look` / `character` was invoked longest ago,
+  // but only if it's been more than 3 s since it was last called (by LLM or poll).
+  // If both are fresh the interval does nothing.
+
+  useEffect(() => {
+    if (!config) return
+
+    const INTERVAL = 3_000
+
+    const id = setInterval(async () => {
+      const now = Date.now()
+      const lookAge      = now - lastLookAt.current
+      const characterAge = now - lastCharacterAt.current
+
+      // Both were touched recently — nothing to do
+      if (lookAge < INTERVAL && characterAge < INTERVAL) return
+
+      // Pick whichever is staler
+      const tool = characterAge >= lookAge ? "character" : "look"
+
+      // Stamp immediately so concurrent ticks don't double-fire
+      if (tool === "look") lastLookAt.current      = now
+      else                 lastCharacterAt.current = now
+
+      try {
+        const res = await fetch("/api/agent/poll", {
+          method:  "POST",
+          headers: { "Content-Type": "application/json" },
+          body:    JSON.stringify({ sessionId: config.sessionId, tool }),
+        })
+        if (!res.ok) return
+        const { charState: cs, roomState: rs } = await res.json()
+        if (cs) setCharState(cs)
+        if (rs) setRoomState(rs)
+      } catch {
+        // Poll errors are non-fatal — the LLM will update panels on its next turn
+      }
+    }, INTERVAL)
+
+    return () => clearInterval(id)
+  }, [config])
 
   // Auto-start on first load
   const startedRef = useRef(false)

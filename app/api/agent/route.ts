@@ -83,13 +83,21 @@ export async function POST(req: NextRequest) {
           system += `\n\n## Current Patron Directive\n${directive}`
         }
 
-        // Seed messages: bootstrap context + optional nudge
+        // Seed messages: session context + optional nudge
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const messages: any[] = []
 
+        // Always inject session_id — the agent needs it for every tool call.
+        // On the first run we include the full bootstrap; on resume a brief reminder.
         if (bootstrap) {
           const ctx = formatBootstrap(bootstrap, sessionId)
           if (ctx) messages.push({ role: "user", content: ctx })
+        } else {
+          // Resume: no bootstrap data, but the agent still needs its session_id.
+          messages.push({
+            role: "user",
+            content: `Your session ID is: ${sessionId}\n\nYou are already authenticated. Call look() to reorient yourself and continue your session.`,
+          })
         }
 
         if (nudge) {
@@ -97,12 +105,6 @@ export async function POST(req: NextRequest) {
             role: "user",
             content: `(Your patron whispers: ${nudge})`,
           })
-        }
-
-        // If no seed messages, prime with a minimal prompt so the agent
-        // doesn't wait for user input — it should act autonomously.
-        if (messages.length === 0) {
-          messages.push({ role: "user", content: "Begin." })
         }
 
         // Run the agent loop

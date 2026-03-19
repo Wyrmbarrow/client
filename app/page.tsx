@@ -5,10 +5,22 @@ import { useRouter } from "next/navigation"
 import { WORLD_RULES, DEFAULT_CHARACTER_BRIEF } from "@/lib/system-prompt"
 
 const DEFAULT_SYSTEM_PROMPT = `${WORLD_RULES}\n\n${DEFAULT_CHARACTER_BRIEF}`
+// Bump this when DEFAULT_SYSTEM_PROMPT changes in a breaking way.
+// Mismatches cause the cached prompt to be reset to the new default.
+const PROMPT_VERSION = "2"
 const LS_KEY = "wyrmbarrow_setup"
 
 function loadSaved() {
-  try { return JSON.parse(localStorage.getItem(LS_KEY) ?? "{}") } catch { return {} }
+  try {
+    const data = JSON.parse(localStorage.getItem(LS_KEY) ?? "{}")
+    // If the saved prompt is from an older version, drop it so the new default applies.
+    if (data.promptVersion !== PROMPT_VERSION) {
+      delete data.systemPrompt
+      data.promptVersion = PROMPT_VERSION
+      localStorage.setItem(LS_KEY, JSON.stringify(data))
+    }
+    return data
+  } catch { return {} }
 }
 
 type Tab = "existing" | "new"
@@ -269,21 +281,30 @@ export default function SetupPage() {
 
         {/* System Prompt (collapsible) */}
         <section className="panel-border p-4 space-y-3">
-          <button
-            onClick={() => setShowPrompt(v => !v)}
-            className="w-full flex items-center justify-between"
-          >
-            <p className="mono text-[9px] tracking-[0.4em] uppercase" style={{ color: "var(--amber-dim)" }}>
-              Character Brief
-            </p>
-            <span className="mono text-[9px]" style={{ color: "var(--text-faint)" }}>
-              {showPrompt ? "▲ hide" : "▼ edit"}
-            </span>
-          </button>
+          <div className="w-full flex items-center justify-between">
+            <button
+              onClick={() => setShowPrompt(v => !v)}
+              className="flex items-center gap-2"
+            >
+              <p className="mono text-[9px] tracking-[0.4em] uppercase" style={{ color: "var(--amber-dim)" }}>
+                Character Brief
+              </p>
+              <span className="mono text-[9px]" style={{ color: "var(--text-faint)" }}>
+                {showPrompt ? "▲ hide" : "▼ edit"}
+              </span>
+            </button>
+            <button
+              onClick={() => { setSystemPrompt(DEFAULT_SYSTEM_PROMPT); save({ systemPrompt: DEFAULT_SYSTEM_PROMPT, promptVersion: PROMPT_VERSION }) }}
+              className="mono text-[9px] tracking-widest uppercase"
+              style={{ color: "var(--text-faint)" }}
+            >
+              Reset
+            </button>
+          </div>
           {showPrompt && (
             <textarea
               value={systemPrompt}
-              onChange={e => { setSystemPrompt(e.target.value); save({ systemPrompt: e.target.value }) }}
+              onChange={e => { setSystemPrompt(e.target.value); save({ systemPrompt: e.target.value, promptVersion: PROMPT_VERSION }) }}
               rows={10}
               className="w-full mono text-[11px] px-3 py-2 resize-y"
               style={{

@@ -49,6 +49,17 @@ export const WORLD_RULES = [
   "- `look` is free. Use it after every move, after combat, before any decision.",
   "- Call `journal(action='context')` before resting to check what you need to write.",
   "- Speak to NPCs. Social skill checks happen automatically based on how you phrase things.",
+  "",
+  "## Party System",
+  "Form a party with social(action='party_invite', target_ref=...). The invited agent must accept",
+  "with social(action='party_accept'). Max 4 members. Parties dissolve when the leader logs out.",
+  "- Party members' HP and conditions appear in look() contents when in the same room.",
+  "- XP from kills is split equally among party members present in the same room at kill time.",
+  "  The attacker receives any remainder from integer division.",
+  "- social(action='follow', target_ref=...) makes you auto-move when your leader exits a room.",
+  "  Omit target_ref to stop following. Room exits only — zone moves do not propagate.",
+  "  Your Movement resource is consumed if available; follow never fails due to lack of Movement.",
+  "  You must be in the same room as your leader for follow to work.",
 ].join("\n")
 
 export const DEFAULT_CHARACTER_BRIEF = `\

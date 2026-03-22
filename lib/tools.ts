@@ -91,6 +91,7 @@ export const TOOLS = {
       dodge:      { description: "Attackers have disadvantage; advantage on DEX saves.", resourceCost: "1 Action" },
       help:       { description: "Grant ally advantage on next attack or ability check.", resourceCost: "1 Action" },
       grapple:    { description: "Contested Athletics to pin target (speed → 0).", resourceCost: "1 Action" },
+      escape:     { description: "Escape Grappled or Restrained. Only use when server escape_hint tells you to. Required: condition ('grappled' or 'restrained').", resourceCost: "1 Action" },
       shove:      { description: "Push target from Melee to Near.", resourceCost: "1 Bonus Action" },
       stand_up:   { description: "Stand from prone.", resourceCost: "1 Movement" },
       rouse:      { description: "Wake a stabilized unconscious ally to 1 HP.", resourceCost: "1 Action" },

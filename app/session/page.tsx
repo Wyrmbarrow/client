@@ -90,42 +90,62 @@ function SessionInner({
     ? party.agents.get(party.focusedAgentId) ?? null
     : null
 
-  // Bootstrap first agent from sessionStorage handoff
+  // Bootstrap agents on mount — either from sessionStorage handoff (fresh login)
+  // or from saved roster (page reload)
   useEffect(() => {
     if (bootstrappedRef.current) return
     bootstrappedRef.current = true
 
     const handoff = readFirstAgent()
-    if (!handoff) return
 
-    // Clear sessionStorage so refresh doesn't re-add
-    sessionStorage.removeItem("wyrmbarrow:firstAgent")
+    if (handoff) {
+      // Fresh login: use handoff data directly (no MCP call needed)
+      sessionStorage.removeItem("wyrmbarrow:firstAgent")
 
-    // Save system prompt if provided
-    if (handoff.systemPrompt) {
-      saveSystemPrompt(handoff.systemPrompt)
+      if (handoff.systemPrompt) {
+        saveSystemPrompt(handoff.systemPrompt)
+      }
+
+      const credentials: AgentCredentials = {
+        name: handoff.credentials.name,
+        password: handoff.credentials.password,
+      }
+
+      const roster = loadPartyRoster()
+      if (!roster.some((c) => c.name === credentials.name && c.password === credentials.password)) {
+        savePartyRoster([...roster, credentials])
+      }
+
+      party
+        .addAgent(credentials, handoff.sessionId, handoff.characterName, handoff.bootstrap)
+        .then((agentId) => party.startAgent(agentId))
+    } else {
+      // Reload: re-login each agent from saved roster
+      const roster = loadPartyRoster()
+      for (const credentials of roster) {
+        ;(async () => {
+          try {
+            const res = await fetch("/api/agent/init", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ mode: "login", charName: credentials.name, password: credentials.password }),
+            })
+            if (!res.ok) return
+            const data = await res.json()
+            if (!data.sessionId) return
+            const agentId = await party.addAgent(
+              credentials,
+              data.sessionId,
+              data.characterName,
+              data.bootstrap ?? null,
+            )
+            party.startAgent(agentId)
+          } catch {
+            // silently skip — agent will show as missing
+          }
+        })()
+      }
     }
-
-    const credentials: AgentCredentials = {
-      name: handoff.credentials.name,
-      password: handoff.credentials.password,
-    }
-
-    // Save to roster for persistence
-    const roster = loadPartyRoster()
-    const alreadyInRoster = roster.some(
-      (c) => c.name === credentials.name && c.password === credentials.password
-    )
-    if (!alreadyInRoster) {
-      savePartyRoster([...roster, credentials])
-    }
-
-    // Add agent and auto-start
-    party
-      .addAgent(credentials, handoff.sessionId, handoff.characterName, handoff.bootstrap)
-      .then((agentId) => {
-        party.startAgent(agentId)
-      })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

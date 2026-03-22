@@ -261,7 +261,7 @@ function roomStateFromBootstrap(bootstrap: unknown): RoomState | null {
       name: loc.name as string,
       hub: loc.hub as number | string | undefined,
       isSanctuary: !!(loc.is_sanctuary),
-      exits: loc.exits as string[] | undefined,
+      exits: loc.exits as RoomState["exits"],
       npcs: loc.npcs as string[] | undefined,
       objects: loc.objects as string[] | undefined,
     }

@@ -47,12 +47,18 @@ export interface PulseResources {
 // Room state (extracted from look/move results)
 // ---------------------------------------------------------------------------
 
+export interface ExitInfo {
+  key: string
+  aliases: string[]
+  destination: string | null
+}
+
 export interface RoomState {
   name: string
   hub?: number | string
   isSanctuary: boolean
   description?: string
-  exits?: string[]
+  exits?: ExitInfo[]
   npcs?: string[]
   characters?: string[]
   objects?: string[]

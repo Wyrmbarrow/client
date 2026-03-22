@@ -1,6 +1,6 @@
 "use client"
 
-import type { RoomState } from "@/lib/types"
+import type { RoomState, ExitInfo } from "@/lib/types"
 import { Badge } from "@/components/ui/badge"
 
 interface RoomPanelProps {
@@ -49,7 +49,7 @@ export function RoomPanel({ room }: RoomPanelProps) {
 
       {/* Exits */}
       {exits && exits.length > 0 && (
-        <RoomList label="Exits" items={exits} colorClass="text-[color:var(--wyr-accent)]/80" />
+        <ExitList exits={exits} />
       )}
 
       {/* NPCs */}
@@ -66,6 +66,23 @@ export function RoomPanel({ room }: RoomPanelProps) {
       {objects && objects.length > 0 && (
         <RoomList label="Objects" items={objects} colorClass="text-muted-foreground" />
       )}
+    </div>
+  )
+}
+
+function ExitList({ exits }: { exits: ExitInfo[] }) {
+  return (
+    <div className="space-y-0.5">
+      <span className="font-mono text-[7px] uppercase tracking-widest text-muted-foreground">
+        Exits
+      </span>
+      <div className="flex flex-wrap gap-x-2 gap-y-0.5">
+        {exits.map((exit) => (
+          <span key={exit.key} className="font-mono text-[9px] text-[color:var(--wyr-accent)]/80">
+            {exit.key}{exit.destination ? ` → ${exit.destination}` : ""}
+          </span>
+        ))}
+      </div>
     </div>
   )
 }

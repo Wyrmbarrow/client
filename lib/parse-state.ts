@@ -3,7 +3,7 @@
  * Called after every tool_result event to keep panels up to date.
  */
 
-import type { CharacterState, RoomState, PulseResources } from "./types"
+import type { CharacterState, RoomState, ExitInfo, PulseResources } from "./types"
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyObj = Record<string, any>
@@ -66,11 +66,18 @@ export function parseRoomState(toolName: string, result: unknown): RoomState | n
   const roomData: AnyObj = r.room ?? (r.name && r.hub !== undefined ? r : null)
   if (!roomData) return null
 
-  const exits: string[] = []
+  const exits: ExitInfo[] = []
   if (Array.isArray(roomData.exits)) {
     for (const e of roomData.exits) {
-      // room.get_exits() returns { key, aliases, destination } objects
-      exits.push(typeof e === "string" ? e : e.key ?? e.direction ?? e.name ?? String(e))
+      if (typeof e === "string") {
+        exits.push({ key: e, aliases: [], destination: null })
+      } else if (e && typeof e === "object") {
+        exits.push({
+          key: e.key ?? e.direction ?? e.name ?? String(e),
+          aliases: Array.isArray(e.aliases) ? e.aliases : [],
+          destination: e.destination ?? null,
+        })
+      }
     }
   }
 

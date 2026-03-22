@@ -16,8 +16,8 @@
   --primary-foreground: oklch(0.90 0.02 75);
   --secondary: oklch(0.20 0.02 55);        /* #2a1f14 — surface */
   --secondary-foreground: oklch(0.90 0.02 75);
-  --muted: oklch(0.50 0.04 65);            /* rgba(160,135,88) */
-  --muted-foreground: oklch(0.50 0.04 65);
+  --muted: oklch(0.20 0.02 55);            /* dark surface for muted backgrounds */
+  --muted-foreground: oklch(0.50 0.04 65); /* rgba(160,135,88) — text on muted */
   --accent: oklch(0.65 0.15 65);           /* gold */
   --accent-foreground: oklch(0.90 0.02 75);
   --destructive: oklch(0.50 0.15 25);      /* #c04040 */
@@ -59,8 +59,6 @@
 * { box-sizing: border-box; }
 
 body {
-  background: #151009;
-  color: #e8e0d0;
   margin: 0;
   padding: 0;
   height: 100dvh;

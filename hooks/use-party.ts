@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useRef } from "react"
+import { useState, useCallback, useRef, useLayoutEffect } from "react"
 import type {
   AgentState, AgentCredentials, LlmConfig, FeedEntry,
   CharacterState, RoomState,
@@ -19,7 +19,7 @@ export function useParty({ llmConfig }: UsePartyOptions) {
   const [partyDirective, setPartyDirectiveState] = useState(loadPartyDirective)
 
   const agentsRef = useRef(agents)
-  agentsRef.current = agents
+  useLayoutEffect(() => { agentsRef.current = agents })
 
   const streamsRef = useRef<Map<string, ReturnType<typeof createStreamManager>>>(new Map())
 

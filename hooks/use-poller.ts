@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect, useLayoutEffect, useRef } from "react"
 import type { AgentState, CharacterState, RoomState } from "@/lib/types"
 
 interface PollerConfig {
@@ -17,7 +17,7 @@ const FRESHNESS_THRESHOLD = 1000
 
 export function usePoller(config: PollerConfig) {
   const configRef = useRef(config)
-  configRef.current = config
+  useLayoutEffect(() => { configRef.current = config })
 
   useEffect(() => {
     const charTimer = setInterval(() => {

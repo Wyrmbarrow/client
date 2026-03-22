@@ -41,29 +41,24 @@ function readFirstAgent(): FirstAgentHandoff | null {
 
 export default function SessionPage() {
   const router = useRouter()
-  const [llmConfig, setLlmConfig] = useState<LlmConfig | null>(null)
-  const [ready, setReady] = useState(false)
-  const bootstrappedRef = useRef(false)
-
-  // Load LLM config on mount — redirect if missing
-  useEffect(() => {
+  const [llmConfig] = useState<LlmConfig | null>(() => {
     const firstAgent = readFirstAgent()
     if (firstAgent?.llmConfig) {
-      // The setup page embeds llmConfig in the handoff; persist it
       saveLlmConfig(firstAgent.llmConfig)
-      setLlmConfig(firstAgent.llmConfig)
-    } else {
-      const saved = loadLlmConfig()
-      if (!saved) {
-        router.replace("/")
-        return
-      }
-      setLlmConfig(saved)
+      return firstAgent.llmConfig
     }
-    setReady(true)
-  }, [router])
+    return loadLlmConfig()
+  })
+  const bootstrappedRef = useRef(false)
 
-  if (!ready || !llmConfig) {
+  // Redirect if no config was found on mount
+  useEffect(() => {
+    if (!llmConfig) {
+      router.replace("/")
+    }
+  }, [llmConfig, router])
+
+  if (!llmConfig) {
     return (
       <div className="h-dvh flex items-center justify-center">
         <p className="font-mono text-xs text-muted-foreground">Loading...</p>

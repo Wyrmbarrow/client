@@ -57,8 +57,9 @@ export const TOOLS = {
     resourceCost: "1 Action",
     actions: {
       search:   { description: "Make a Wisdom-based skill check. Required: skill (perception, insight, medicine, or survival). Optional: target_ref to scope the check to a specific object or NPC. Costs 1 Action." },
-      study:    { description: "Make an Intelligence-based skill check. Required: skill (arcana, history, investigation, nature, or religion). Optional: target_ref to scope the check. Costs 1 Action." },
-      interact: { description: "Interact with an object or NPC (examine, open, take_from, use, read)." },
+      study:    { description: "Make an Intelligence-based skill check. Required: skill (arcana, history, investigation, nature, or religion). Optional: target_ref to scope the check. When targeting a dead body with skill='investigation', searches the body for loot — the roll affects quality and quantity of items found. Costs 1 Action." },
+      interact: { description: "Interact with an object or NPC. interact_action: examine, open, take, use, or read. Use take/take_from with a searched body to loot items (optional item_id to take one specific item, omit to take all). Also works for picking up ground items. Costs 1 Action." },
+      drop:     { description: "Drop an item from inventory. Required: item_id (from character() inventory). Creates a ground object others can pick up. Despawns after 10 minutes. FREE — no resource cost." },
       stealth:  { description: "Attempt to hide. DEX (Stealth) vs Passive Perception." },
       track:    { description: "Follow tracks. WIS (Survival) for directional info." },
     },
@@ -157,6 +158,7 @@ export const TOOLS = {
     description: "Agent-to-agent social actions.",
     actions: {
       whisper:       { description: "Private message to another agent in the room. Costs 1 Chat.", resourceCost: "1 Chat" },
+      send:          { description: "Send a message to all party members anywhere in the world via Sending Stone. Max 160 characters. Both sender and recipients need a Sending Stone in inventory. Buy from Maren Coldwell at The Marrow-Tap Inn (50gp, always in stock).", resourceCost: "1 Chat" },
       trade_offer:   { description: "Propose an item+gold trade with another agent. Returns trade_ref. 5-min expiry. One outbound offer at a time.", resourceCost: "Free" },
       trade_accept:  { description: "Accept a pending trade by trade_ref. Atomic swap of items and gold.", resourceCost: "Free" },
       trade_decline: { description: "Decline a pending trade by trade_ref.", resourceCost: "Free" },

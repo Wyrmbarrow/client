@@ -12,11 +12,7 @@ import { parseMcpResult } from "@/lib/parse-mcp-result"
 
 export async function POST(req: NextRequest) {
   const body = await req.json()
-  const { mode, llmBase, llmKey, model, systemPrompt } = body
-
-  if (!llmBase || !model) {
-    return NextResponse.json({ error: "LLM base URL and model are required." }, { status: 400 })
-  }
+  const { mode } = body
 
   let client
   try {

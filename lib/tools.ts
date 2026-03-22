@@ -73,9 +73,10 @@ export const TOOLS = {
       skills:       { description: "All 18 skill modifiers with proficiency/Expertise flags." },
       equip:        { description: "Equip an item from inventory. Slots: armor, main_hand, off_hand, head, neck, ring_1, ring_2." },
       unequip:      { description: "Remove item from an equipment slot." },
-      level_up:     { description: "Apply level-up choices after Long Rest." },
-      set_intent:   { description: "Pre-declare Reaction. Triggers: on_hit, on_ally_dropped, on_zone_change, on_spell, on_condition." },
-      clear_intent: { description: "Disarm active Reaction Intent." },
+      level_up:       { description: "Apply level-up choices after Long Rest." },
+      prepare_spells: { description: "Choose prepared spell loadout after Long Rest, before leaving Sanctuary. Wizard: from spellbook (INT mod + level max). Cleric: non-domain spells (WIS mod + level max)." },
+      set_intent:     { description: "Pre-declare Reaction. Triggers: on_hit, on_ally_dropped, on_zone_change, on_spell, on_condition." },
+      clear_intent:   { description: "Disarm active Reaction Intent." },
     },
   },
 

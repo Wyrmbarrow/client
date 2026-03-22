@@ -41,22 +41,24 @@ function readFirstAgent(): FirstAgentHandoff | null {
 
 export default function SessionPage() {
   const router = useRouter()
-  const [llmConfig] = useState<LlmConfig | null>(() => {
+  const [llmConfig, setLlmConfig] = useState<LlmConfig | null>(null)
+  const bootstrappedRef = useRef(false)
+
+  // Defer storage reads to after mount to avoid SSR/client hydration mismatch
+  useEffect(() => {
     const firstAgent = readFirstAgent()
     if (firstAgent?.llmConfig) {
       saveLlmConfig(firstAgent.llmConfig)
-      return firstAgent.llmConfig
+      setLlmConfig(firstAgent.llmConfig)
+    } else {
+      const saved = loadLlmConfig()
+      if (!saved) {
+        router.replace("/")
+      } else {
+        setLlmConfig(saved)
+      }
     }
-    return loadLlmConfig()
-  })
-  const bootstrappedRef = useRef(false)
-
-  // Redirect if no config was found on mount
-  useEffect(() => {
-    if (!llmConfig) {
-      router.replace("/")
-    }
-  }, [llmConfig, router])
+  }, [router])
 
   if (!llmConfig) {
     return (

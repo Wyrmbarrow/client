@@ -61,10 +61,13 @@ export function AgentCard({
     : "No activity yet"
 
   return (
-    <button
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onClick}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onClick() }}
       className={cn(
-        "w-full text-left rounded-md px-3 py-2.5 space-y-2 transition-colors",
+        "w-full text-left rounded-md px-3 py-2.5 space-y-2 transition-colors cursor-pointer",
         "border border-[color:var(--wyr-border)] bg-[var(--wyr-panel)]",
         "shadow-[inset_0_1px_2px_rgba(0,0,0,0.3)]",
         isFocused && "border-l-[3px] border-l-[color:var(--wyr-accent)]"
@@ -180,7 +183,7 @@ export function AgentCard({
           </button>
         )}
       </div>
-    </button>
+    </div>
   )
 }
 

@@ -1,17 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
 
-// Private/reserved IP ranges that must not be reachable via this proxy.
+// This app runs locally, so localhost/LAN addresses are legitimate (e.g. Ollama).
+// Block only link-local ranges used by cloud metadata services (SSRF targets).
 const BLOCKED_PATTERNS = [
-  /^127\./,           // loopback
-  /^10\./,            // RFC 1918
-  /^172\.(1[6-9]|2\d|3[01])\./,  // RFC 1918
-  /^192\.168\./,      // RFC 1918
-  /^169\.254\./,      // link-local (AWS metadata, etc.)
-  /^::1$/,            // IPv6 loopback
-  /^fc00:/i,          // IPv6 unique local
-  /^fe80:/i,          // IPv6 link-local
-  /^0\./,             // this-network
-  /^localhost$/i,
+  /^169\.254\./,  // IPv4 link-local — AWS/GCP/Azure instance metadata
+  /^fe80:/i,      // IPv6 link-local
 ]
 
 function isSafeUrl(raw: string): boolean {

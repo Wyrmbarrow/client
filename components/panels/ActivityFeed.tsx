@@ -3,13 +3,14 @@
 import { useEffect, useRef } from "react"
 import type { FeedEntry } from "@/lib/types"
 import { TOOL_CATEGORY } from "@/lib/tools"
-import ThinkingEvent from "@/components/feed/ThinkingEvent"
-import LookEvent    from "@/components/feed/LookEvent"
-import MoveEvent    from "@/components/feed/MoveEvent"
-import SpeakEvent   from "@/components/feed/SpeakEvent"
-import JournalEvent from "@/components/feed/JournalEvent"
-import CombatEvent  from "@/components/feed/CombatEvent"
-import GenericEvent from "@/components/feed/GenericEvent"
+import ThinkingEvent from "@/components/feed/thinking-event"
+import LookEvent    from "@/components/feed/look-event"
+import MoveEvent    from "@/components/feed/move-event"
+import SpeakEvent   from "@/components/feed/speak-event"
+import JournalEvent from "@/components/feed/journal-event"
+import CombatEvent  from "@/components/feed/combat-event"
+import GenericEvent from "@/components/feed/generic-event"
+import ShopEvent   from "@/components/feed/shop-event"
 
 interface Props {
   entries: FeedEntry[]
@@ -28,12 +29,8 @@ export default function ActivityFeed({ entries, roomState }: Props) {
   return (
     <div className="panel-border h-full overflow-y-auto flex flex-col">
       {/* Label */}
-      <div className="sticky top-0 px-4 py-2 flex items-center gap-2" style={{
-        background: "var(--bg-panel)",
-        borderBottom: "1px solid var(--border)",
-        zIndex: 10,
-      }}>
-        <span className="mono text-[9px] tracking-[0.3em] uppercase" style={{ color: "var(--amber-dim)" }}>
+      <div className="sticky top-0 px-4 py-2 flex items-center gap-2 border-b border-[color:var(--wyr-border)] bg-[var(--wyr-panel)] z-10">
+        <span className="font-mono text-[9px] tracking-[0.3em] uppercase text-[color:var(--wyr-muted)]">
           Activity
         </span>
       </div>
@@ -42,7 +39,7 @@ export default function ActivityFeed({ entries, roomState }: Props) {
       <div className="flex-1 flex flex-col py-2 gap-1">
         {entries.length === 0 && (
           <div className="px-4 py-8 text-center">
-            <p className="mono text-[10px]" style={{ color: "var(--text-faint)" }}>
+            <p className="font-mono text-[10px] text-[color:var(--wyr-muted)]">
               Agent will begin once connected…
             </p>
           </div>
@@ -74,7 +71,7 @@ function FeedRow({
   if (event.type === "error") {
     return (
       <div className="px-4 py-1.5">
-        <span className="mono text-[10px]" style={{ color: "#c0504a" }}>⚠ {event.message}</span>
+        <span className="font-mono text-[10px] text-[color:var(--wyr-danger)]">⚠ {event.message}</span>
       </div>
     )
   }
@@ -82,7 +79,7 @@ function FeedRow({
   if (event.type === "done") {
     return (
       <div className="px-4 py-1.5">
-        <span className="mono text-[9px] tracking-widest uppercase" style={{ color: "var(--text-faint)" }}>
+        <span className="font-mono text-[9px] tracking-widest uppercase text-[color:var(--wyr-muted)]">
           — {event.reason === "stop" ? "session paused" : event.reason} —
         </span>
       </div>
@@ -124,6 +121,12 @@ function FeedRow({
       return (
         <div className="px-3 py-1">
           <CombatEvent input={input} result={result} />
+        </div>
+      )
+    case "shop":
+      return (
+        <div className="px-3 py-1">
+          <ShopEvent input={input} result={result} />
         </div>
       )
     default:

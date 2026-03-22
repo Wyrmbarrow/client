@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef, useLayoutEffect } from "react"
 import type {
-  AgentState, AgentCredentials, LlmConfig, FeedEntry,
+  AgentState, AgentCredentials, LlmConfig, FeedEntry, CharacterState, RoomState,
 } from "@/lib/types"
 import { buildSystemPrompt } from "@/lib/system-prompt"
 import { loadPartyDirective, savePartyDirective, loadSystemPrompt } from "@/lib/party-storage"
@@ -79,8 +79,8 @@ export function useParty({ llmConfig }: UsePartyOptions) {
       sessionId,
       characterName,
       credentials,
-      charState: null,
-      roomState: null,
+      charState: charStateFromBootstrap(bootstrap),
+      roomState: roomStateFromBootstrap(bootstrap),
       entries: [],
       status: "idle",
       directive: credentials.directive ?? "",
@@ -216,6 +216,57 @@ export function useParty({ llmConfig }: UsePartyOptions) {
     setDirective,
     setPartyDirective,
     nudge,
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Bootstrap parsers — extract initial charState/roomState from login payload
+// ---------------------------------------------------------------------------
+
+function charStateFromBootstrap(bootstrap: unknown): CharacterState | null {
+  try {
+    const b = bootstrap as Record<string, unknown>
+    const char = b?.character as Record<string, unknown>
+    if (!char) return null
+    const cs = char.charsheet as Record<string, unknown>
+    const pr = char.pulse_resources as Record<string, number> | undefined
+    return {
+      name: char.name as string,
+      class: cs?.class as string | undefined,
+      level: cs?.level as number | undefined,
+      hpCurrent: (cs?.hp_current as number) ?? 0,
+      hpMax: (cs?.hp_max as number) ?? 0,
+      conditions: char.conditions as string[] | undefined,
+      isDying: char.is_dying as boolean | undefined,
+      engagementZones: char.engagement_zones as Record<string, string> | undefined,
+      resources: pr ? {
+        action: pr.action ?? 0,
+        movement: pr.movement ?? 0,
+        bonus_action: pr.bonus_action ?? 0,
+        reaction: pr.reaction ?? 0,
+        chat: pr.chat ?? 0,
+      } : undefined,
+    }
+  } catch {
+    return null
+  }
+}
+
+function roomStateFromBootstrap(bootstrap: unknown): RoomState | null {
+  try {
+    const b = bootstrap as Record<string, unknown>
+    const loc = b?.location as Record<string, unknown>
+    if (!loc || loc.is_limbo) return null
+    return {
+      name: loc.name as string,
+      hub: loc.hub as number | string | undefined,
+      isSanctuary: !!(loc.is_sanctuary),
+      exits: loc.exits as string[] | undefined,
+      npcs: loc.npcs as string[] | undefined,
+      objects: loc.objects as string[] | undefined,
+    }
+  } catch {
+    return null
   }
 }
 

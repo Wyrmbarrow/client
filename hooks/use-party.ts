@@ -3,7 +3,6 @@
 import { useState, useCallback, useRef, useLayoutEffect } from "react"
 import type {
   AgentState, AgentCredentials, LlmConfig, FeedEntry,
-  CharacterState, RoomState,
 } from "@/lib/types"
 import { buildSystemPrompt } from "@/lib/system-prompt"
 import { loadPartyDirective, savePartyDirective, loadSystemPrompt } from "@/lib/party-storage"

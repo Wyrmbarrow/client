@@ -67,3 +67,38 @@ export interface FeedEntry {
   timestamp: number
   event: AgentEvent
 }
+
+// ---------------------------------------------------------------------------
+// Party management types
+// ---------------------------------------------------------------------------
+
+export interface LlmConfig {
+  baseUrl: string
+  apiKey: string
+  model: string
+  noToolChoice?: boolean
+}
+
+export interface AgentCredentials {
+  name: string
+  password: string
+  directive?: string
+  llmOverride?: Partial<LlmConfig> | null
+}
+
+export interface AgentState {
+  agentId: string
+  sessionId: string
+  characterName: string
+  credentials: AgentCredentials
+  charState: CharacterState | null
+  roomState: RoomState | null
+  entries: FeedEntry[]
+  status: "idle" | "running" | "stopped" | "resumable"
+  directive: string
+  llmOverride: Partial<LlmConfig> | null
+  lastCharPoll: number
+  lastLookPoll: number
+  /** Bootstrap data from login — used on first run only */
+  bootstrap: unknown
+}

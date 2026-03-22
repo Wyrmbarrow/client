@@ -10,18 +10,18 @@ export default function GenericEvent({ tool, input, result }: {
 
   return (
     <div className="px-3 py-1.5 flex gap-2 items-baseline flex-wrap">
-      <span className="mono text-[9px] tracking-[0.2em] uppercase shrink-0" style={{ color: "rgba(100,65,15,0.7)" }}>
+      <span className="font-mono text-[9px] tracking-[0.2em] uppercase shrink-0 text-[color:var(--wyr-muted)]">
         {tool}
       </span>
       {action && (
-        <span className="mono text-[10px] shrink-0" style={{ color: "var(--text-faint)" }}>{action}</span>
+        <span className="font-mono text-[10px] shrink-0 text-[color:var(--wyr-muted)]">{action}</span>
       )}
       {isError ? (
-        <span className="mono text-[10px]" style={{ color: "#c0504a" }}>{r.error}</span>
+        <span className="font-mono text-[10px] text-[color:var(--wyr-danger)]">{r.error}</span>
       ) : r?.message ? (
-        <span className="mono text-[10px]" style={{ color: "var(--text-dim)" }}>{r.message}</span>
+        <span className="font-mono text-[10px] text-[color:var(--wyr-muted)]">{r.message}</span>
       ) : r?.status ? (
-        <span className="mono text-[10px]" style={{ color: "var(--text-faint)" }}>{r.status}</span>
+        <span className="font-mono text-[10px] text-[color:var(--wyr-muted)]">{r.status}</span>
       ) : null}
     </div>
   )

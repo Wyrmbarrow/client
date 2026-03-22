@@ -88,8 +88,10 @@ export function buildSystemPrompt(options: {
   characterClass?: string
   characterLevel?: number
   characterBrief?: string
+  partyDirective?: string
+  agentDirective?: string
 }): string {
-  const { characterName, characterClass, characterLevel, characterBrief } = options
+  const { characterName, characterClass, characterLevel, characterBrief, partyDirective, agentDirective } = options
 
   const classLine = characterClass
     ? ` You are a level ${characterLevel ?? 1} ${characterClass}.`
@@ -101,5 +103,9 @@ export function buildSystemPrompt(options: {
 
   const brief = characterBrief ?? DEFAULT_CHARACTER_BRIEF
 
-  return `${rules}\n\n${brief}`
+  const parts = [rules, brief]
+  if (partyDirective) parts.push(`## Party Goal\n${partyDirective}`)
+  if (agentDirective) parts.push(`## Your Directive\n${agentDirective}`)
+
+  return parts.join("\n\n")
 }

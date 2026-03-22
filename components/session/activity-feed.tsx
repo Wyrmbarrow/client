@@ -1,60 +1,49 @@
 "use client"
 
 import { useEffect, useRef } from "react"
-import type { FeedEntry } from "@/lib/types"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import type { FeedEntry, RoomState } from "@/lib/types"
 import { TOOL_CATEGORY } from "@/lib/tools"
-import ThinkingEvent from "@/components/feed/ThinkingEvent"
-import LookEvent    from "@/components/feed/LookEvent"
-import MoveEvent    from "@/components/feed/MoveEvent"
-import SpeakEvent   from "@/components/feed/SpeakEvent"
-import JournalEvent from "@/components/feed/JournalEvent"
-import CombatEvent  from "@/components/feed/CombatEvent"
-import GenericEvent from "@/components/feed/GenericEvent"
+import ThinkingEvent from "@/components/feed/thinking-event"
+import LookEvent from "@/components/feed/look-event"
+import MoveEvent from "@/components/feed/move-event"
+import SpeakEvent from "@/components/feed/speak-event"
+import JournalEvent from "@/components/feed/journal-event"
+import CombatEvent from "@/components/feed/combat-event"
+import ShopEvent from "@/components/feed/shop-event"
+import GenericEvent from "@/components/feed/generic-event"
 
-interface Props {
+interface ActivityFeedProps {
   entries: FeedEntry[]
-  /** Current room state for enriching LookEvent when result lacks full detail */
-  roomState?: import("@/lib/types").RoomState | null
+  roomState: RoomState | null
 }
 
-export default function ActivityFeed({ entries, roomState }: Props) {
+export function ActivityFeed({ entries, roomState }: ActivityFeedProps) {
   const bottomRef = useRef<HTMLDivElement>(null)
 
   // Auto-scroll to bottom on new entries
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [entries])
+  }, [entries.length])
 
   return (
-    <div className="panel-border h-full overflow-y-auto flex flex-col">
-      {/* Label */}
-      <div className="sticky top-0 px-4 py-2 flex items-center gap-2" style={{
-        background: "var(--bg-panel)",
-        borderBottom: "1px solid var(--border)",
-        zIndex: 10,
-      }}>
-        <span className="mono text-[9px] tracking-[0.3em] uppercase" style={{ color: "var(--amber-dim)" }}>
-          Activity
-        </span>
-      </div>
-
-      {/* Feed */}
-      <div className="flex-1 flex flex-col py-2 gap-1">
+    <ScrollArea className="flex-1">
+      <div className="flex flex-col py-2 gap-1">
         {entries.length === 0 && (
           <div className="px-4 py-8 text-center">
-            <p className="mono text-[10px]" style={{ color: "var(--text-faint)" }}>
-              Agent will begin once connected…
+            <p className="font-mono text-[10px] text-[color:var(--wyr-muted)]">
+              Agent will begin once started...
             </p>
           </div>
         )}
 
-        {entries.map(entry => (
+        {entries.map((entry) => (
           <FeedRow key={entry.id} entry={entry} roomState={roomState} />
         ))}
 
         <div ref={bottomRef} />
       </div>
-    </div>
+    </ScrollArea>
   )
 }
 
@@ -63,7 +52,7 @@ function FeedRow({
   roomState,
 }: {
   entry: FeedEntry
-  roomState?: import("@/lib/types").RoomState | null
+  roomState: RoomState | null
 }) {
   const { event } = entry
 
@@ -74,7 +63,9 @@ function FeedRow({
   if (event.type === "error") {
     return (
       <div className="px-4 py-1.5">
-        <span className="mono text-[10px]" style={{ color: "#c0504a" }}>⚠ {event.message}</span>
+        <span className="font-mono text-[10px] text-[color:var(--wyr-danger)]">
+          {event.message}
+        </span>
       </div>
     )
   }
@@ -82,14 +73,14 @@ function FeedRow({
   if (event.type === "done") {
     return (
       <div className="px-4 py-1.5">
-        <span className="mono text-[9px] tracking-widest uppercase" style={{ color: "var(--text-faint)" }}>
-          — {event.reason === "stop" ? "session paused" : event.reason} —
+        <span className="font-mono text-[9px] tracking-widest uppercase text-[color:var(--wyr-muted)]">
+          -- {event.reason === "stop" ? "session paused" : event.reason} --
         </span>
       </div>
     )
   }
 
-  // tool_call events: just a quiet label (the result will follow)
+  // tool_call events: suppress (the result will follow)
   if (event.type === "tool_call") {
     return null
   }
@@ -97,10 +88,10 @@ function FeedRow({
   if (event.type !== "tool_result") return null
 
   const { tool, result } = event
-
   const input = event.input ?? {}
 
-  const category = TOOL_CATEGORY[tool as keyof typeof TOOL_CATEGORY] ?? "system"
+  // Use category for potential future grouping
+  void TOOL_CATEGORY[tool as keyof typeof TOOL_CATEGORY]
 
   switch (tool) {
     case "look":
@@ -126,8 +117,13 @@ function FeedRow({
           <CombatEvent input={input} result={result} />
         </div>
       )
+    case "shop":
+      return (
+        <div className="px-3 py-1">
+          <ShopEvent input={input} result={result} />
+        </div>
+      )
     default:
-      void category
       return <GenericEvent tool={tool} input={input} result={result} />
   }
 }

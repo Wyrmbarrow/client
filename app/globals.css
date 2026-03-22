@@ -1,28 +1,64 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
 
 :root {
-  --bg:        #100c06;
-  --bg-panel:  #1a1208;
-  --bg-card:   #1f1508;
-  --border:    rgba(118, 82, 24, 0.45);
-  --border-hi: rgba(195, 125, 32, 0.68);
-  --amber:     #c37d20;
-  --amber-dim: rgba(192, 128, 42, 0.7);
-  --amber-faint: rgba(160, 110, 40, 0.5);
-  --text:      rgba(200, 175, 130, 0.9);
-  --text-dim:  rgba(152, 128, 82, 0.75);
-  --text-faint: rgba(120, 95, 55, 0.55);
-  --mono:      "GeistMono", "Fira Code", "Cascadia Code", ui-monospace, monospace;
-  --serif:     Georgia, "Times New Roman", serif;
-  --sans:      system-ui, sans-serif;
+  /* Portal palette — parchment and leather */
+  --background: oklch(0.13 0.02 55);       /* #151009 — deep charred bone */
+  --foreground: oklch(0.90 0.02 75);       /* #e8e0d0 — warm parchment */
+  --card: oklch(0.18 0.02 55);             /* #1e1610 — dark leather */
+  --card-foreground: oklch(0.90 0.02 75);  /* #e8e0d0 */
+  --popover: oklch(0.18 0.02 55);          /* #1e1610 */
+  --popover-foreground: oklch(0.90 0.02 75);
+  --primary: oklch(0.65 0.15 65);          /* #cd7d1c — gold accent */
+  --primary-foreground: oklch(0.90 0.02 75);
+  --secondary: oklch(0.20 0.02 55);        /* #2a1f14 — surface */
+  --secondary-foreground: oklch(0.90 0.02 75);
+  --muted: oklch(0.20 0.02 55);            /* dark surface for muted backgrounds */
+  --muted-foreground: oklch(0.50 0.04 65); /* rgba(160,135,88) — text on muted */
+  --accent: oklch(0.65 0.15 65);           /* gold */
+  --accent-foreground: oklch(0.90 0.02 75);
+  --destructive: oklch(0.50 0.15 25);      /* #c04040 */
+  --border: oklch(0.25 0.04 55);           /* #3a2a14 — leather */
+  --input: oklch(0.20 0.02 55);            /* #2a1f14 */
+  --ring: oklch(0.65 0.15 65);             /* gold focus ring */
+  --radius: 0.375rem;                      /* 6px */
+
+  /* Sidebar (unused for now, but shadcn expects them) */
+  --sidebar: oklch(0.18 0.02 55);
+  --sidebar-foreground: oklch(0.90 0.02 75);
+  --sidebar-primary: oklch(0.65 0.15 65);
+  --sidebar-primary-foreground: oklch(0.90 0.02 75);
+  --sidebar-accent: oklch(0.20 0.02 55);
+  --sidebar-accent-foreground: oklch(0.90 0.02 75);
+  --sidebar-border: oklch(0.25 0.04 55);
+  --sidebar-ring: oklch(0.65 0.15 65);
+
+  /* Chart tokens */
+  --chart-1: oklch(0.65 0.15 65);
+  --chart-2: oklch(0.50 0.04 65);
+  --chart-3: oklch(0.40 0.04 55);
+  --chart-4: oklch(0.30 0.04 55);
+  --chart-5: oklch(0.20 0.02 55);
+
+  /* Custom Wyrmbarrow tokens */
+  --wyr-panel: #1e1610;
+  --wyr-surface: #2a1f14;
+  --wyr-accent: #cd7d1c;
+  --wyr-muted: rgba(160,135,88,0.6);
+  --wyr-border: #3a2a14;
+  --wyr-crimson: #8b1a1a;
+  --wyr-healthy: #4a9e6b;
+  --wyr-warning: #c49a2a;
+  --wyr-danger: #c04040;
+  --wyr-parchment: #dcc896;
 }
 
 * { box-sizing: border-box; }
 
 body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--sans);
   margin: 0;
   padding: 0;
   height: 100dvh;
@@ -32,24 +68,83 @@ body {
 /* Scrollbars */
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+::-webkit-scrollbar-thumb { background: var(--wyr-border); border-radius: 2px; }
 
-/* Utilities */
-.mono { font-family: var(--mono); }
-.serif { font-family: var(--serif); }
-.panel-border {
-  border: 1px solid var(--border);
-  background: var(--bg-panel);
+/* Ambient warmth — portal-style radial gradient */
+.ambient-warmth {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background: radial-gradient(ellipse 700px 500px at 50% 48%, rgba(130,60,10,0.10) 0%, transparent 70%);
 }
-.corner-ornaments { position: relative; overflow: hidden; }
+
+/* Corner ornaments for look/room events */
+.corner-ornaments { position: relative; }
 .corner-ornaments::before,
 .corner-ornaments::after {
   content: "";
   position: absolute;
   width: 8px;
   height: 8px;
-  border-color: var(--border-hi);
+  border-color: rgba(205,125,28,0.3);
   border-style: solid;
 }
-.corner-ornaments::before { top: 0; left: 0; border-width: 1px 0 0 1px; }
-.corner-ornaments::after  { top: 0; right: 0; border-width: 1px 1px 0 0; }
+.corner-ornaments::before { top: 4px; left: 4px; border-width: 1px 0 0 1px; }
+.corner-ornaments::after  { top: 4px; right: 4px; border-width: 1px 1px 0 0; }
+
+@theme inline {
+  --font-heading: var(--font-cinzel);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}

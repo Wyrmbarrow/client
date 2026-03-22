@@ -11,6 +11,7 @@ import { Sidebar } from "@/components/session/sidebar"
 import { AgentHeader } from "@/components/session/agent-header"
 import { ActivityFeed } from "@/components/session/activity-feed"
 import { PatronInput } from "@/components/session/patron-input"
+import { AddAgentDialog } from "@/components/session/add-agent-dialog"
 
 // ---------------------------------------------------------------------------
 // First-agent handoff shape (written by setup page to sessionStorage)
@@ -86,6 +87,7 @@ function SessionInner({
 }) {
   const router = useRouter()
   const party = useParty({ llmConfig })
+  const [addDialogOpen, setAddDialogOpen] = useState(false)
 
   const focusedAgent = party.focusedAgentId
     ? party.agents.get(party.focusedAgentId) ?? null
@@ -141,10 +143,57 @@ function SessionInner({
   }
 
   function handleAddAgent() {
-    // TODO: Task 8 will add the add-agent dialog
+    setAddDialogOpen(true)
+  }
+
+  async function handleAddAgentSuccess(data: {
+    sessionId: string
+    characterName: string
+    bootstrap: unknown
+    credentials: { name: string; password: string }
+  }) {
+    const credentials: AgentCredentials = {
+      name: data.credentials.name,
+      password: data.credentials.password,
+    }
+
+    // Persist to roster
+    const roster = loadPartyRoster()
+    const alreadyInRoster = roster.some(
+      (c) => c.name === credentials.name && c.password === credentials.password
+    )
+    if (!alreadyInRoster) {
+      savePartyRoster([...roster, credentials])
+    }
+
+    // Add agent and auto-start
+    const agentId = await party.addAgent(
+      credentials,
+      data.sessionId,
+      data.characterName,
+      data.bootstrap
+    )
+    party.startAgent(agentId)
+    setAddDialogOpen(false)
+  }
+
+  function handleRemoveAgent(agentId: string) {
+    // Remove credentials from persisted roster before removing from party state
+    const agent = party.agents.get(agentId)
+    if (agent) {
+      const roster = loadPartyRoster()
+      const updated = roster.filter(
+        (c) => !(c.name === agent.credentials.name && c.password === agent.credentials.password)
+      )
+      savePartyRoster(updated)
+    }
+
+    // removeAgent stops the stream and removes from state; also shifts focus
+    party.removeAgent(agentId)
   }
 
   return (
+    <>
     <div className="flex flex-col h-dvh">
       <TopBar
         partyDirective={party.partyDirective}
@@ -161,6 +210,7 @@ function SessionInner({
           onStartAgent={party.startAgent}
           onStopAgent={party.stopAgent}
           onAddAgent={handleAddAgent}
+          onRemoveAgent={handleRemoveAgent}
         />
         <div className="flex flex-col flex-1 overflow-hidden">
           <AgentHeader agent={focusedAgent} />
@@ -186,5 +236,11 @@ function SessionInner({
         </div>
       </div>
     </div>
+    <AddAgentDialog
+      open={addDialogOpen}
+      onOpenChange={setAddDialogOpen}
+      onSuccess={handleAddAgentSuccess}
+    />
+    </>
   )
 }

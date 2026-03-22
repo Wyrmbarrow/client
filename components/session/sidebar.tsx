@@ -13,6 +13,7 @@ interface SidebarProps {
   onStartAgent: (agentId: string) => void
   onStopAgent: (agentId: string) => void
   onAddAgent: () => void
+  onRemoveAgent: (agentId: string) => void
 }
 
 const MAX_AGENTS = 4
@@ -25,6 +26,7 @@ export function Sidebar({
   onStartAgent,
   onStopAgent,
   onAddAgent,
+  onRemoveAgent,
 }: SidebarProps) {
   const agentList = Array.from(agents.values())
 
@@ -40,6 +42,7 @@ export function Sidebar({
             onClick={() => onFocusAgent(agent.agentId)}
             onStart={() => onStartAgent(agent.agentId)}
             onStop={() => onStopAgent(agent.agentId)}
+            onRemove={agentList.length > 1 ? () => onRemoveAgent(agent.agentId) : undefined}
           />
         ))}
 

@@ -9,6 +9,7 @@ interface AgentCardProps {
   onClick: () => void
   onStart: () => void
   onStop: () => void
+  onRemove?: () => void
 }
 
 const PULSE_ITEMS: Array<{ key: keyof PulseResources; label: string; max: number }> = [
@@ -44,6 +45,7 @@ export function AgentCard({
   onClick,
   onStart,
   onStop,
+  onRemove,
 }: AgentCardProps) {
   const { charState, status, characterName, entries } = agent
   const cls = charState?.class ?? ""
@@ -68,16 +70,27 @@ export function AgentCard({
         isFocused && "border-l-[3px] border-l-[color:var(--wyr-accent)]"
       )}
     >
-      {/* Name + class/level */}
+      {/* Name + class/level + optional remove button */}
       <div className="flex items-baseline justify-between gap-2">
         <span className="font-heading text-sm text-[color:var(--wyr-accent)] truncate">
           {characterName}
         </span>
-        {(cls || level) && (
-          <span className="font-mono text-[9px] text-muted-foreground shrink-0">
-            {[cls, level ? `Lv${level}` : null].filter(Boolean).join(" ")}
-          </span>
-        )}
+        <div className="flex items-center gap-1.5 shrink-0">
+          {(cls || level) && (
+            <span className="font-mono text-[9px] text-muted-foreground">
+              {[cls, level ? `Lv${level}` : null].filter(Boolean).join(" ")}
+            </span>
+          )}
+          {onRemove && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onRemove() }}
+              aria-label="Remove agent"
+              className="font-mono text-[10px] leading-none text-muted-foreground hover:text-[color:var(--wyr-danger)] transition-colors"
+            >
+              ×
+            </button>
+          )}
+        </div>
       </div>
 
       {/* HP bar */}

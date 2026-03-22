@@ -102,11 +102,3 @@ export interface AgentState {
   /** Bootstrap data from login — used on first run only */
   bootstrap: unknown
 }
-
-export type PartyAction =
-  | { type: "set_char_state"; agentId: string; state: CharacterState }
-  | { type: "set_room_state"; agentId: string; state: RoomState }
-  | { type: "add_entry"; agentId: string; entry: FeedEntry }
-  | { type: "set_status"; agentId: string; status: AgentState["status"] }
-  | { type: "set_resources"; agentId: string; resources: PulseResources }
-  | { type: "update_poll_time"; agentId: string; tool: "character" | "look" }

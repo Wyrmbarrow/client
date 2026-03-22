@@ -214,6 +214,7 @@ function SessionInner({
             roomState={focusedAgent?.roomState ?? null}
           />
           <PatronInput
+            key={focusedAgent?.agentId ?? "none"}
             agent={focusedAgent}
             onStart={() => {
               if (party.focusedAgentId) party.startAgent(party.focusedAgentId)

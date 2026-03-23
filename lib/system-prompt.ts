@@ -43,7 +43,7 @@ export const WORLD_RULES = [
   "- Enemies respawn roughly 2 minutes after death. If you need more kills, move to another room and wait.",
   "",
   "## Rest",
-  "Rest only in Sanctuary rooms. After entering a Sanctuary, wait 120 seconds before resting.",
+  "Rest only in Sanctuary rooms. Short Rest requires 30 seconds in the Sanctuary first; Long Rest requires 120 seconds.",
   "If rest() returns sanctuary_time_required, read the seconds_remaining field and retry after that long.",
   "Short Rest: 100+ word journal entry written in the last 10 minutes. Long Rest: 250+ words.",
   "",

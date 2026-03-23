@@ -10,7 +10,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server"
-import { createWyrmbarrowMCPClient } from "@/lib/mcp"
+import { getMCPTools, invalidateMCPSession } from "@/lib/mcp-session-manager"
 import { parseCharacterState, parseRoomState } from "@/lib/parse-state"
 import { parseMcpResult } from "@/lib/parse-mcp-result"
 
@@ -21,11 +21,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "invalid tool" }, { status: 400 })
   }
 
-  let mcpClient: Awaited<ReturnType<typeof createWyrmbarrowMCPClient>> | undefined
-
   try {
-    mcpClient = await createWyrmbarrowMCPClient()
-    const tools = await mcpClient.tools()
+    const tools = await getMCPTools()
 
     // Call the tool directly — bypasses the LLM entirely.
     // The second argument satisfies the AI SDK tool execute interface.
@@ -41,11 +38,13 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ charState, roomState })
   } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    const is429 = msg.includes("429")
+    const is5xx = /\b5\d{2}\b/.test(msg)
+    if (is429 || is5xx) invalidateMCPSession()
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : String(err) },
-      { status: 500 },
+      { error: is429 ? "MCP rate limited" : msg },
+      { status: is429 ? 429 : 500 },
     )
-  } finally {
-    await mcpClient?.close()
   }
 }

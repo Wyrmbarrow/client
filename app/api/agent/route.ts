@@ -39,6 +39,7 @@ export async function POST(req: NextRequest) {
     directive,
     nudge,
     bootstrap,
+    resumeContext,
     noToolChoice,
   } = await req.json()
 
@@ -94,10 +95,9 @@ export async function POST(req: NextRequest) {
           const ctx = formatBootstrap(bootstrap, sessionId)
           if (ctx) messages.push({ role: "user", content: ctx })
         } else {
-          // Resume: no bootstrap data, but the agent still needs its session_id.
           messages.push({
             role: "user",
-            content: `Your session ID is: ${sessionId}\n\nYou are already authenticated. Call look() to reorient yourself and continue your session.`,
+            content: formatResumeContext(resumeContext, sessionId),
           })
         }
 
@@ -228,6 +228,42 @@ export async function POST(req: NextRequest) {
       "X-Accel-Buffering": "no",
     },
   })
+}
+
+// ---------------------------------------------------------------------------
+// Format polled state as a resume context message (used on every restart)
+// ---------------------------------------------------------------------------
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function formatResumeContext(ctx: { charState: any; roomState: any } | undefined, sessionId: string): string {
+  const parts: string[] = [`Your session ID is: ${sessionId}`, ""]
+
+  if (ctx?.charState) {
+    const c = ctx.charState
+    parts.push(`You are ${c.name}${c.class ? ` (${c.class} ${c.level ?? 1})` : ""}.`)
+    parts.push(`HP: ${c.hpCurrent}/${c.hpMax}${c.ac != null ? `  AC: ${c.ac}` : ""}`)
+    if (c.conditions?.length) parts.push(`Conditions: ${c.conditions.join(", ")}`)
+    if (c.isDying) parts.push("⚠ YOU ARE DYING — make Death Saves each Pulse.")
+    const zones = c.engagementZones ? Object.entries(c.engagementZones) : []
+    if (zones.length) parts.push(`⚠ COMBAT: ${zones.map(([k, v]) => `${k} (${v})`).join(", ")}`)
+    if (c.resources) {
+      const r = c.resources
+      parts.push(`Resources: action=${r.action} movement=${r.movement} bonus=${r.bonus_action} reaction=${r.reaction} chat=${r.chat}`)
+    }
+    parts.push("")
+  }
+
+  if (ctx?.roomState) {
+    const r = ctx.roomState
+    parts.push(`Location: ${r.name}${r.hub != null ? ` (Hub ${r.hub})` : ""}${r.isSanctuary ? " — Sanctuary" : ""}`)
+    if (r.exits?.length) parts.push(`Exits: ${r.exits.map((e: { key: string }) => e.key).join(", ")}`)
+    if (r.npcs?.length) parts.push(`NPCs here: ${r.npcs.join(", ")}`)
+    if (r.characters?.length) parts.push(`Party/players here: ${r.characters.join(", ")}`)
+    parts.push("")
+  }
+
+  parts.push("Continue your session. This context is current — no need to call look() or character() unless you want more detail.")
+  return parts.join("\n")
 }
 
 // ---------------------------------------------------------------------------

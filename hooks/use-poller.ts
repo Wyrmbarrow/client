@@ -32,7 +32,9 @@ export function usePoller(config: PollerConfig) {
       let stalestTime = Infinity
 
       for (const [id, agent] of agents) {
-        if (agent.status !== "running" && agent.status !== "resumable") continue
+        // Skip running agents — their tool calls push state via the SSE stream.
+        // Polling while the agent is active just competes for MCP connections.
+        if (agent.status !== "resumable") continue
         const inSanctuary = agent.roomState?.isSanctuary ?? false
         const inCombat = agent.charState?.engagementZones
           && Object.keys(agent.charState.engagementZones).length > 0
@@ -71,7 +73,8 @@ export function usePoller(config: PollerConfig) {
       if (!focusedAgentId) return
       const agent = agents.get(focusedAgentId)
       if (!agent) return
-      if (agent.status !== "running" && agent.status !== "resumable" && agent.status !== "idle") return
+      // Same as char poll — skip running agents.
+      if (agent.status !== "resumable" && agent.status !== "idle") return
       if (Date.now() - agent.lastLookPoll < 3000) return
 
       fetch("/api/agent/poll", {

@@ -152,6 +152,10 @@ export function useParty({ llmConfig }: UsePartyOptions) {
         characterName: agent.characterName,
         nudge: opts?.nudge,
         bootstrap: agent.bootstrap,
+        resumeContext: agent.bootstrap ? undefined : {
+          charState: agent.charState,
+          roomState: agent.roomState,
+        },
       },
       {
         onEvent: (entry) => processEvent(agentId, entry),
@@ -284,6 +288,7 @@ interface StreamStartOptions {
   characterName: string
   nudge?: string
   bootstrap?: unknown
+  resumeContext?: { charState: CharacterState | null; roomState: RoomState | null }
 }
 
 interface StreamCallbacks {
@@ -314,6 +319,7 @@ function createStreamManager() {
             characterName: options.characterName,
             nudge: options.nudge,
             bootstrap: options.bootstrap,
+            resumeContext: options.resumeContext,
           }),
           signal: controller.signal,
         })

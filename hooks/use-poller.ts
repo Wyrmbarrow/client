@@ -11,9 +11,9 @@ interface PollerConfig {
   onPollTime: (agentId: string, tool: "character" | "look") => void
 }
 
-const CHAR_POLL_INTERVAL = 1000
-const LOOK_POLL_INTERVAL = 5000
-const FRESHNESS_THRESHOLD = 1000
+const CHAR_POLL_INTERVAL = 3000   // half a Pulse (Pulse = 6s)
+const LOOK_POLL_INTERVAL = 6000   // once per Pulse
+const FRESHNESS_THRESHOLD = 3000
 const BACKOFF_MS = 30_000
 
 export function usePoller(config: PollerConfig) {
@@ -32,9 +32,7 @@ export function usePoller(config: PollerConfig) {
       let stalestTime = Infinity
 
       for (const [id, agent] of agents) {
-        // Skip running agents — their tool calls push state via the SSE stream.
-        // Polling while the agent is active just competes for MCP connections.
-        if (agent.status !== "resumable") continue
+        if (agent.status === "stopped") continue
         const inSanctuary = agent.roomState?.isSanctuary ?? false
         const inCombat = agent.charState?.engagementZones
           && Object.keys(agent.charState.engagementZones).length > 0
@@ -73,9 +71,7 @@ export function usePoller(config: PollerConfig) {
       if (!focusedAgentId) return
       const agent = agents.get(focusedAgentId)
       if (!agent) return
-      // Same as char poll — skip running agents.
-      if (agent.status !== "resumable" && agent.status !== "idle") return
-      if (Date.now() - agent.lastLookPoll < 3000) return
+      if (agent.status === "stopped") return
 
       fetch("/api/agent/poll", {
         method: "POST",

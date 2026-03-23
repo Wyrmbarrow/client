@@ -15,8 +15,8 @@ export default function LookEvent({ result, roomState }: Props) {
   const sanctuary   = room?.is_sanctuary ?? roomState?.isSanctuary ?? false
   const desc        = room?.description ?? room?.desc ?? roomState?.description ?? ""
   const exits: string[] = room?.exits
-    ? room.exits.map((e: unknown) => typeof e === "string" ? e : (e as Record<string, string>)?.direction ?? (e as Record<string, string>)?.name)
-    : roomState?.exits ?? []
+    ? room.exits.map((e: unknown) => typeof e === "string" ? e : (e as Record<string, string>)?.key ?? (e as Record<string, string>)?.direction ?? (e as Record<string, string>)?.name ?? String(e))
+    : roomState?.exits?.map(e => e.key) ?? []
   const npcs: string[]  = extractNames(room?.npcs ?? roomState?.npcs)
   const chars: string[] = extractNames(room?.characters ?? room?.agents ?? roomState?.characters)
   const objs: string[]  = extractNames(room?.objects ?? roomState?.objects)

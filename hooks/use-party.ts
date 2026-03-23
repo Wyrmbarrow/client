@@ -156,10 +156,15 @@ export function useParty({ llmConfig }: UsePartyOptions) {
       {
         onEvent: (entry) => processEvent(agentId, entry),
         onDone: (reason) => {
-          updateAgent(agentId, {
-            status: reason === "stop" ? "stopped" : "resumable",
-            bootstrap: undefined,
-          })
+          if (reason === "stop") {
+            // Model chose to stop — park it so the patron can review.
+            updateAgent(agentId, { status: "stopped", bootstrap: undefined })
+          } else {
+            // Hit step limit — clear bootstrap so the next run uses resume context,
+            // then restart automatically after a brief pause.
+            updateAgent(agentId, { bootstrap: undefined })
+            setTimeout(() => startAgent(agentId), 500)
+          }
         },
         onError: (message) => {
           addEntry(agentId, {

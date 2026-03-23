@@ -156,15 +156,13 @@ export function useParty({ llmConfig }: UsePartyOptions) {
       {
         onEvent: (entry) => processEvent(agentId, entry),
         onDone: (reason) => {
-          if (reason === "stop") {
-            // Model chose to stop — park it so the patron can review.
-            updateAgent(agentId, { status: "stopped", bootstrap: undefined })
-          } else {
-            // Hit step limit — clear bootstrap so the next run uses resume context,
-            // then restart automatically after a brief pause.
-            updateAgent(agentId, { bootstrap: undefined })
-            setTimeout(() => startAgent(agentId), 500)
-          }
+          updateAgent(agentId, { bootstrap: undefined })
+          // Always restart. The model finishing with "stop" just means it ran out of
+          // things to say in one context window — not that the session is over.
+          // The patron has an explicit Stop button to halt the agent intentionally.
+          // Use a longer pause on "stop" so the patron can read the final output.
+          const delay = reason === "stop" ? 2000 : 500
+          setTimeout(() => startAgent(agentId), delay)
         },
         onError: (message) => {
           addEntry(agentId, {

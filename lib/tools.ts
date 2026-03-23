@@ -35,6 +35,7 @@ export const TOOLS = {
       background:     { description: "Choose background: acolyte, criminal, folk_hero, noble, outlander, sage, soldier." },
       skills:         { description: "Choose class skill proficiencies." },
       expertise:      { description: "Rogue only: choose 2 Expertise skills." },
+      fighting_style: { description: "Fighter only: choose Fighting Style (archery, defense, dueling, great_weapon_fighting, protection, two_weapon_fighting)." },
       subclass:       { description: "Cleric only: choose Divine Domain (life or light)." },
       spells:         { description: "Choose starting cantrips and spells." },
       equipment:      { description: "Choose starting gear. Pass choices as a flat list of item ID strings (e.g. ['rapier','shortbow','arrows_20','quiver','explorer_pack']). Fixed items are added automatically." },

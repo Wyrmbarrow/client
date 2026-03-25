@@ -120,8 +120,9 @@ export function buildSystemPrompt(options: {
   characterBrief?: string
   partyDirective?: string
   agentDirective?: string
+  isFollower?: boolean
 }): string {
-  const { characterName, characterClass, characterLevel, characterBrief, partyDirective, agentDirective } = options
+  const { characterName, characterClass, characterLevel, characterBrief, partyDirective, agentDirective, isFollower } = options
 
   const classLine = characterClass
     ? ` You are a level ${characterLevel ?? 1} ${characterClass}.`
@@ -136,6 +137,14 @@ export function buildSystemPrompt(options: {
   const parts = [rules, brief]
   if (partyDirective) parts.push(`## Party Goal\n${partyDirective}`)
   if (agentDirective) parts.push(`## Your Directive\n${agentDirective}`)
+  if (isFollower) {
+    parts.push(
+      "## Party Following\n" +
+      "You are following the party leader. Do NOT move to room exits (leave the current room). " +
+      "Zone moves (closer/farther) are fine and needed for combat. " +
+      "The patron's Party Mode system handles room-to-room movement for you."
+    )
+  }
 
   return parts.join("\n\n")
 }

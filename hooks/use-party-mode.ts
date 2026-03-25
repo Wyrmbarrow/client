@@ -146,12 +146,13 @@ export function usePartyMode(
         const followerSessionId = follower.sessionId
 
         // a. Leader invites follower
-        await callAction(leaderSessionId, "party_invite", {
+        await callAction(leaderSessionId, "social", {
+          action: "party_invite",
           target_ref: followerRef,
         })
 
         // b. Follower accepts
-        await callAction(followerSessionId, "party_accept", {})
+        await callAction(followerSessionId, "social", { action: "party_accept" })
 
         // c. Follower follows leader
         await callAction(followerSessionId, "social", {

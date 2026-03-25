@@ -24,7 +24,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "tool is required" }, { status: 400 })
   }
 
-  const PARTY_ACTION_TOOLS = new Set(["party_invite", "party_accept", "social"])
+  // All party operations go through the "social" tool with different action params.
+  const PARTY_ACTION_TOOLS = new Set(["social"])
   if (!PARTY_ACTION_TOOLS.has(tool)) {
     return NextResponse.json({ error: `Tool not allowed: ${tool}` }, { status: 403 })
   }

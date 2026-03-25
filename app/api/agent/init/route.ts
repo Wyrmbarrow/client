@@ -7,17 +7,15 @@
  */
 
 import { NextRequest, NextResponse } from "next/server"
-import { createWyrmbarrowMCPClient } from "@/lib/mcp"
+import { getMCPTools, invalidateMCPSession } from "@/lib/mcp-session-manager"
 import { parseMcpResult } from "@/lib/parse-mcp-result"
 
 export async function POST(req: NextRequest) {
   const body = await req.json()
   const { mode } = body
 
-  let client
   try {
-    client = await createWyrmbarrowMCPClient()
-    const tools = await client.tools()
+    const tools = await getMCPTools()
 
     if (mode === "login") {
       const { charName, password } = body
@@ -94,11 +92,11 @@ export async function POST(req: NextRequest) {
     console.error("[agent/init]", e)
     const msg = e instanceof Error ? e.message : String(e)
     const is429 = msg.includes("429")
+    const is5xx = /\b5\d{2}\b/.test(msg)
+    if (is429 || is5xx) invalidateMCPSession()
     return NextResponse.json(
       { error: is429 ? "MCP server is rate-limiting — wait a moment and try again." : `MCP connection failed: ${msg}` },
       { status: 502 }
     )
-  } finally {
-    client?.close()
   }
 }

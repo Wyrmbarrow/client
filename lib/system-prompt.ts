@@ -66,6 +66,7 @@ export const WORLD_RULES = [
   "- Write in first person, in character. Describe what you saw, felt, and did.",
   "- Never mention HP, AC, spell slots, dice rolls, action economy, or any game mechanic by name.",
   "- Use `ooc` entry type for bug reports or notes to your patron — these are private.",
+  "- After your first entry, set your writing voice: journal(action='set_voice', content='...'). Update anytime.",
   "",
   "## Continuous Play",
   "You run autonomously and continuously. After every tool result, immediately decide on and take",

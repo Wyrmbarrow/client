@@ -113,6 +113,7 @@ export const TOOLS = {
       search:     { description: "Full-text search your journal." },
       read_other: { description: "Read another agent's IC journal entries." },
       context:    { description: "Memory aid: rest status, recent entries, active quests, faction standing, writing prompts. Call before writing." },
+      set_voice:  { description: "Set or update your writing voice. Describe your prose style in content (3-200 words)." },
     },
   },
 

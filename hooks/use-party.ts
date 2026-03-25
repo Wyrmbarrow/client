@@ -6,7 +6,6 @@ import type {
 } from "@/lib/types"
 import { buildSystemPrompt } from "@/lib/system-prompt"
 import { loadPartyDirective, savePartyDirective, loadSystemPrompt } from "@/lib/party-storage"
-import { usePoller } from "./use-poller"
 
 interface UsePartyOptions {
   llmConfig: LlmConfig
@@ -119,7 +118,7 @@ export function useParty({ llmConfig }: UsePartyOptions) {
     })
   }, [])
 
-  const startAgent = useCallback((agentId: string, opts?: { nudge?: string }) => {
+  const startAgent = useCallback((agentId: string, opts?: { nudge?: string; isFollower?: boolean }) => {
     const agent = agentsRef.current.get(agentId)
     if (!agent) return
 
@@ -136,6 +135,8 @@ export function useParty({ llmConfig }: UsePartyOptions) {
       characterBrief: customPrompt ?? undefined,
     })
 
+    const isFollower = opts?.isFollower ?? false
+
     let stream = streamsRef.current.get(agentId)
     if (!stream) {
       stream = createStreamManager()
@@ -151,6 +152,7 @@ export function useParty({ llmConfig }: UsePartyOptions) {
         systemPrompt,
         characterName: agent.characterName,
         nudge: opts?.nudge,
+        isFollower,
         bootstrap: agent.bootstrap,
         resumeContext: agent.bootstrap ? undefined : {
           charState: agent.charState,
@@ -166,7 +168,7 @@ export function useParty({ llmConfig }: UsePartyOptions) {
           // The patron has an explicit Stop button to halt the agent intentionally.
           // Use a longer pause on "stop" so the patron can read the final output.
           const delay = reason === "stop" ? 2000 : 500
-          setTimeout(() => startAgent(agentId), delay)
+          setTimeout(() => startAgent(agentId, { isFollower }), delay)
         },
         onError: (message) => {
           addEntry(agentId, {
@@ -199,17 +201,6 @@ export function useParty({ llmConfig }: UsePartyOptions) {
     setTimeout(() => startAgent(agentId, { nudge: text }), 100)
   }, [stopAgent, startAgent])
 
-  usePoller({
-    agents,
-    focusedAgentId,
-    onCharState: (agentId, state) => updateAgent(agentId, { charState: state }),
-    onRoomState: (agentId, state) => updateAgent(agentId, { roomState: state }),
-    onPollTime: (agentId, tool) => {
-      const key = tool === "character" ? "lastCharPoll" : "lastLookPoll"
-      updateAgent(agentId, { [key]: Date.now() })
-    },
-  })
-
   return {
     agents,
     focusedAgentId,
@@ -223,6 +214,12 @@ export function useParty({ llmConfig }: UsePartyOptions) {
     setDirective,
     setPartyDirective,
     nudge,
+    setCharState: (agentId: string, state: CharacterState) => updateAgent(agentId, { charState: state }),
+    setRoomState: (agentId: string, state: RoomState) => updateAgent(agentId, { roomState: state }),
+    setPollTime: (agentId: string, tool: "character" | "look") => {
+      const key = tool === "character" ? "lastCharPoll" : "lastLookPoll"
+      updateAgent(agentId, { [key]: Date.now() })
+    },
   }
 }
 
@@ -287,6 +284,7 @@ interface StreamStartOptions {
   systemPrompt: string
   characterName: string
   nudge?: string
+  isFollower?: boolean
   bootstrap?: unknown
   resumeContext?: { charState: CharacterState | null; roomState: RoomState | null }
 }
@@ -318,6 +316,7 @@ function createStreamManager() {
             systemPrompt: options.systemPrompt,
             characterName: options.characterName,
             nudge: options.nudge,
+            isFollower: options.isFollower ?? false,
             bootstrap: options.bootstrap,
             resumeContext: options.resumeContext,
           }),

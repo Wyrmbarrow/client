@@ -2,12 +2,19 @@
 
 import { useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
+import PartyModeToggle from "@/components/session/party-mode-toggle"
+import type { PartyModeState } from "@/hooks/use-party-mode"
 
 interface TopBarProps {
   partyDirective: string
   onDirectiveChange: (text: string) => void
   modelName: string
   onExit: () => void
+  agentCount?: number
+  partyMode?: PartyModeState
+  onTogglePartyMode?: () => void
+  canEnablePartyMode?: boolean
+  partyModeDisabledReason?: string
 }
 
 export function TopBar({
@@ -15,6 +22,11 @@ export function TopBar({
   onDirectiveChange,
   modelName,
   onExit,
+  agentCount = 0,
+  partyMode,
+  onTogglePartyMode,
+  canEnablePartyMode = false,
+  partyModeDisabledReason,
 }: TopBarProps) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(partyDirective)
@@ -74,8 +86,16 @@ export function TopBar({
         )}
       </div>
 
-      {/* Right: model badge + exit */}
+      {/* Right: party mode toggle + model badge + exit */}
       <div className="flex items-center gap-2 shrink-0">
+        {agentCount > 1 && partyMode && onTogglePartyMode && (
+          <PartyModeToggle
+            status={partyMode.status}
+            canEnable={canEnablePartyMode}
+            disabledReason={partyModeDisabledReason}
+            onToggle={onTogglePartyMode}
+          />
+        )}
         <span className="font-mono text-[9px] tracking-widest uppercase text-muted-foreground bg-muted/50 px-2 py-1 rounded">
           {modelName}
         </span>

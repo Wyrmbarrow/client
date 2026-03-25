@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useParty } from "@/hooks/use-party"
+import { usePartyMode } from "@/hooks/use-party-mode"
+import { usePoller } from "@/hooks/use-poller"
 import { loadLlmConfig, saveLlmConfig, loadPartyRoster, savePartyRoster, saveSystemPrompt } from "@/lib/party-storage"
 import type { LlmConfig, AgentCredentials } from "@/lib/types"
 
@@ -86,6 +88,43 @@ function SessionInner({
   const party = useParty({ llmConfig })
   const [addDialogOpen, setAddDialogOpen] = useState(false)
 
+  const { partyMode, togglePartyMode, canEnablePartyMode, partyModeError } = usePartyMode(
+    party.agents,
+    party.focusedAgentId,
+    party.startAgent,
+  )
+
+  usePoller({
+    agents: party.agents,
+    focusedAgentId: party.focusedAgentId,
+    onCharState: party.setCharState,
+    onRoomState: party.setRoomState,
+    onPollTime: party.setPollTime,
+    partyModeStatus: partyMode.status,
+    leaderId: partyMode.leaderId,
+  })
+
+  // Compute a human-readable disabled reason for Party Mode
+  const partyModeDisabledReason = (() => {
+    if (canEnablePartyMode) return undefined
+    if (party.agents.size < 2) return undefined // toggle hidden anyway
+    const leader = party.focusedAgentId ? party.agents.get(party.focusedAgentId) : null
+    const leaderRoom = leader?.roomState?.name
+    if (!leaderRoom) return "Leader has no room data yet."
+    const mismatched: string[] = []
+    for (const [id, agent] of party.agents) {
+      if (id === party.focusedAgentId) continue
+      if (agent.status === "stopped") continue
+      if (agent.roomState?.name !== leaderRoom) {
+        mismatched.push(agent.characterName)
+      }
+    }
+    if (mismatched.length > 0) {
+      return `${mismatched.join(", ")} must be in the same room to enable Party Mode.`
+    }
+    return "All characters must be in the same room to enable Party Mode."
+  })()
+
   const focusedAgent = party.focusedAgentId
     ? party.agents.get(party.focusedAgentId) ?? null
     : null
@@ -120,19 +159,19 @@ function SessionInner({
         .addAgent(credentials, handoff.sessionId, handoff.characterName, handoff.bootstrap)
         .then((agentId) => party.startAgent(agentId))
     } else {
-      // Reload: re-login each agent from saved roster
+      // Reload: re-login each agent from saved roster (sequential to avoid MCP rate limit)
       const roster = loadPartyRoster()
-      for (const credentials of roster) {
-        ;(async () => {
+      ;(async () => {
+        for (const credentials of roster) {
           try {
             const res = await fetch("/api/agent/init", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ mode: "login", charName: credentials.name, password: credentials.password }),
             })
-            if (!res.ok) return
+            if (!res.ok) continue
             const data = await res.json()
-            if (!data.sessionId) return
+            if (!data.sessionId) continue
             const agentId = await party.addAgent(
               credentials,
               data.sessionId,
@@ -143,8 +182,8 @@ function SessionInner({
           } catch {
             // silently skip — agent will show as missing
           }
-        })()
-      }
+        }
+      })()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -217,7 +256,17 @@ function SessionInner({
         onDirectiveChange={party.setPartyDirective}
         modelName={llmConfig.model}
         onExit={handleExit}
+        agentCount={party.agents.size}
+        partyMode={partyMode}
+        onTogglePartyMode={togglePartyMode}
+        canEnablePartyMode={canEnablePartyMode}
+        partyModeDisabledReason={partyModeDisabledReason}
       />
+      {partyModeError && (
+        <div className="px-4 py-2 bg-destructive/10 border-b border-destructive/30 font-mono text-xs text-destructive">
+          {partyModeError}
+        </div>
+      )}
       <div className="flex flex-1 overflow-hidden">
         <Sidebar
           agents={party.agents}
@@ -228,6 +277,7 @@ function SessionInner({
           onStopAgent={party.stopAgent}
           onAddAgent={handleAddAgent}
           onRemoveAgent={handleRemoveAgent}
+          partyMode={partyMode}
         />
         <div className="flex flex-col flex-1 overflow-hidden">
           <AgentHeader agent={focusedAgent} />

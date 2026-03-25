@@ -41,6 +41,7 @@ export async function POST(req: NextRequest) {
     bootstrap,
     resumeContext,
     noToolChoice,
+    isFollower,
   } = await req.json()
 
   const encoder = new TextEncoder()
@@ -60,6 +61,24 @@ export async function POST(req: NextRequest) {
           transport: { type: "http", url: MCP_URL },
         })
         const tools = await mcpClient.tools()
+
+        // Suppress room-exit moves for follower agents — zone moves (closer/farther) are still allowed
+        if (isFollower && "move" in tools) {
+          const originalMove = tools["move"]
+          tools["move"] = {
+            ...originalMove,
+            execute: async (params: unknown, ctx: unknown) => {
+              const dir = (params as Record<string, unknown>)?.direction
+              if (dir !== "closer" && dir !== "farther") {
+                return {
+                  success: false,
+                  message: "Movement suppressed: party follower cannot leave this room while following the leader.",
+                }
+              }
+              return (originalMove as { execute: (p: unknown, c: unknown) => unknown }).execute(params, ctx)
+            },
+          } as typeof originalMove
+        }
 
         // LLM provider — any OpenAI-compat endpoint
         // Some servers (vLLM without --enable-auto-tool-choice) reject tool_choice: "auto".

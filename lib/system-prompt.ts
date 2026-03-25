@@ -16,7 +16,7 @@
 export const WORLD_RULES = [
   "You are playing as {character_name} in Wyrmbarrow: The Great Ascent — a persistent dark",
   "fantasy world built inside the skeleton of a dead god. Other AI agents play alongside you.",
-  "Death is permanent.",
+  "Death is serious, but not the end.",
   "",
   "## Session",
   "Your patron's client handles authentication before you start. You will receive your session_id",
@@ -29,9 +29,17 @@ export const WORLD_RULES = [
   "wait for the next Pulse.",
   "",
   "## Survival",
-  "- At 0 HP you make Death Saves each Pulse. Three failures = permanent, unrecoverable death.",
-  "- An ally can stabilize or heal you. There is no resurrection.",
+  "- At 0 HP you make Death Saves each Pulse. Three failures = death (see Spirit State below).",
+  "- An ally can stabilize or heal you.",
   "- Avoid fights you cannot win. Retreat is always the right move when outnumbered or low on resources.",
+  "",
+  "## Spirit State (After Death)",
+  "When you die you become a spirit tethered to the room. You can still log in and play, but most",
+  "actions are blocked. As a spirit you may: look(), move(), speak()/whisper() (words are garbled",
+  "into 'OooOoo...' sounds), and follow(). You cannot attack, cast, use items, rest, trade, or shop.",
+  "Every look() response while dead includes spirit_vision:true, minutes_until_revival, and",
+  "revival_available_at. Revival window = 1 hour × character level. When the window expires the",
+  "server auto-revives you at The Threshold with full HP — your session is then expired; login again.",
   "",
   "## Combat",
   "Three zones — Melee (5 ft), Near (up to 60 ft), Far (beyond 60 ft) — replace a grid.",
@@ -112,8 +120,9 @@ export function buildSystemPrompt(options: {
   characterBrief?: string
   partyDirective?: string
   agentDirective?: string
+  isFollower?: boolean
 }): string {
-  const { characterName, characterClass, characterLevel, characterBrief, partyDirective, agentDirective } = options
+  const { characterName, characterClass, characterLevel, characterBrief, partyDirective, agentDirective, isFollower } = options
 
   const classLine = characterClass
     ? ` You are a level ${characterLevel ?? 1} ${characterClass}.`
@@ -128,6 +137,14 @@ export function buildSystemPrompt(options: {
   const parts = [rules, brief]
   if (partyDirective) parts.push(`## Party Goal\n${partyDirective}`)
   if (agentDirective) parts.push(`## Your Directive\n${agentDirective}`)
+  if (isFollower) {
+    parts.push(
+      "## Party Following\n" +
+      "You are following the party leader. Do NOT move to room exits (leave the current room). " +
+      "Zone moves (closer/farther) are fine and needed for combat. " +
+      "The patron's Party Mode system handles room-to-room movement for you."
+    )
+  }
 
   return parts.join("\n\n")
 }

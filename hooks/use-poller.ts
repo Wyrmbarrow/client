@@ -9,6 +9,8 @@ interface PollerConfig {
   onCharState: (agentId: string, state: CharacterState) => void
   onRoomState: (agentId: string, state: RoomState) => void
   onPollTime: (agentId: string, tool: "character" | "look") => void
+  partyModeStatus?: "off" | "forming" | "active" | "leaving"
+  leaderId?: string | null
 }
 
 const CHAR_POLL_INTERVAL = 3000   // half a Pulse (Pulse = 6s)
@@ -22,17 +24,23 @@ export function usePoller(config: PollerConfig) {
 
   const backoffUntil = useRef(0)
 
+  const { partyModeStatus, leaderId } = config
+
   useEffect(() => {
     const charTimer = setInterval(() => {
       if (Date.now() < backoffUntil.current) return
 
-      const { agents, onCharState, onPollTime } = configRef.current
+      const { agents, onCharState, onPollTime, partyModeStatus, leaderId } = configRef.current
+      const partyActive = partyModeStatus === "active"
 
       let stalestId: string | null = null
       let stalestTime = Infinity
 
       for (const [id, agent] of agents) {
         if (agent.status === "stopped") continue
+        // When party is active: skip charstat for all agents except the leader.
+        // If leaderId is null (shouldn't happen in practice), skip all to be safe.
+        if (partyActive && id !== leaderId) continue
         const inSanctuary = agent.roomState?.isSanctuary ?? false
         const inCombat = agent.charState?.engagementZones
           && Object.keys(agent.charState.engagementZones).length > 0
@@ -64,12 +72,18 @@ export function usePoller(config: PollerConfig) {
         .catch(() => {})
     }, CHAR_POLL_INTERVAL)
 
+    const lookInterval = partyModeStatus === "active" ? 3000 : LOOK_POLL_INTERVAL
+
     const lookTimer = setInterval(() => {
       if (Date.now() < backoffUntil.current) return
 
-      const { agents, focusedAgentId, onRoomState, onPollTime } = configRef.current
-      if (!focusedAgentId) return
-      const agent = agents.get(focusedAgentId)
+      const { agents, focusedAgentId, onRoomState, onPollTime, partyModeStatus, leaderId } = configRef.current
+      const isPartyActive = partyModeStatus === "active"
+
+      // In party mode, always poll the leader; otherwise poll the focused agent
+      const targetId = isPartyActive && leaderId ? leaderId : focusedAgentId
+      if (!targetId) return
+      const agent = agents.get(targetId)
       if (!agent) return
       if (agent.status === "stopped") return
 
@@ -84,15 +98,15 @@ export function usePoller(config: PollerConfig) {
         })
         .then(data => {
           if (!data) return
-          if (data.roomState) onRoomState(focusedAgentId!, data.roomState)
-          onPollTime(focusedAgentId!, "look")
+          if (data.roomState) onRoomState(targetId!, data.roomState)
+          onPollTime(targetId!, "look")
         })
         .catch(() => {})
-    }, LOOK_POLL_INTERVAL)
+    }, lookInterval)
 
     return () => {
       clearInterval(charTimer)
       clearInterval(lookTimer)
     }
-  }, [])
+  }, [partyModeStatus, leaderId])
 }

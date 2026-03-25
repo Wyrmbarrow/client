@@ -61,6 +61,8 @@ export interface RoomState {
   exits?: ExitInfo[]
   npcs?: string[]
   characters?: string[]
+  /** Character refs for party operations (party_invite, follow). Parallel to characters[]. */
+  characterRefs?: { name: string; ref: string }[]
   objects?: string[]
 }
 

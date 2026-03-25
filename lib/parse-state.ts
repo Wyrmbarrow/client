@@ -85,6 +85,7 @@ export function parseRoomState(toolName: string, result: unknown): RoomState | n
   const contents: AnyObj = roomData.contents ?? roomData
   const npcs: string[] = extractNames(contents.npcs ?? roomData.npcs)
   const characters: string[] = extractNames(contents.characters ?? contents.agents ?? roomData.characters ?? roomData.agents)
+  const characterRefs = extractRefs(contents.characters ?? contents.agents ?? roomData.characters ?? roomData.agents)
   const objects: string[] = extractNames(contents.objects ?? roomData.objects)
 
   return {
@@ -95,6 +96,7 @@ export function parseRoomState(toolName: string, result: unknown): RoomState | n
     exits,
     npcs,
     characters,
+    characterRefs,
     objects,
   }
 }
@@ -108,5 +110,19 @@ function extractNames(arr: unknown): string[] {
       return o.name ?? o.key ?? o.npc ?? String(item)
     }
     return String(item)
+  })
+}
+
+function extractRefs(arr: unknown): { name: string; ref: string }[] {
+  if (!Array.isArray(arr)) return []
+  return arr.map((item) => {
+    if (typeof item === "string") return { name: item, ref: item }
+    if (typeof item === "object" && item !== null) {
+      const o = item as AnyObj
+      const name = o.name ?? o.key ?? o.npc ?? String(item)
+      const ref = o.ref ?? o.key ?? o.id ?? name
+      return { name, ref }
+    }
+    return { name: String(item), ref: String(item) }
   })
 }

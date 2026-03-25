@@ -1,6 +1,7 @@
 "use client"
 
 import type { AgentState, RoomState } from "@/lib/types"
+import type { PartyModeState } from "@/hooks/use-party-mode"
 import { AgentCard } from "@/components/session/agent-card"
 import { RoomPanel } from "@/components/session/room-panel"
 import { Button } from "@/components/ui/button"
@@ -14,6 +15,7 @@ interface SidebarProps {
   onStopAgent: (agentId: string) => void
   onAddAgent: () => void
   onRemoveAgent: (agentId: string) => void
+  partyMode?: PartyModeState
 }
 
 const MAX_AGENTS = 4
@@ -27,8 +29,10 @@ export function Sidebar({
   onStopAgent,
   onAddAgent,
   onRemoveAgent,
+  partyMode,
 }: SidebarProps) {
   const agentList = Array.from(agents.values())
+  const partyActive = partyMode?.status === "active"
 
   return (
     <aside className="w-60 h-full flex flex-col border-r border-[color:var(--wyr-border)] bg-[var(--wyr-panel)]">
@@ -43,6 +47,8 @@ export function Sidebar({
             onStart={() => onStartAgent(agent.agentId)}
             onStop={() => onStopAgent(agent.agentId)}
             onRemove={agentList.length > 1 ? () => onRemoveAgent(agent.agentId) : undefined}
+            isLeader={partyActive && agent.agentId === partyMode?.leaderId}
+            isFollower={partyActive && (partyMode?.followerIds.has(agent.agentId) ?? false)}
           />
         ))}
 

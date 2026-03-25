@@ -38,8 +38,9 @@ export function usePoller(config: PollerConfig) {
 
       for (const [id, agent] of agents) {
         if (agent.status === "stopped") continue
-        // Skip charstat for non-leader agents in party mode (their HP is in leader's look result)
-        if (partyActive && leaderId && id !== leaderId) continue
+        // When party is active: skip charstat for all agents except the leader.
+        // If leaderId is null (shouldn't happen in practice), skip all to be safe.
+        if (partyActive && id !== leaderId) continue
         const inSanctuary = agent.roomState?.isSanctuary ?? false
         const inCombat = agent.charState?.engagementZones
           && Object.keys(agent.charState.engagementZones).length > 0

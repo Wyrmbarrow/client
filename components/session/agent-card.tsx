@@ -1,5 +1,6 @@
 "use client"
 
+import { Crown, Link2 } from "lucide-react"
 import type { AgentState, PulseResources } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
@@ -10,6 +11,8 @@ interface AgentCardProps {
   onStart: () => void
   onStop: () => void
   onRemove?: () => void
+  isLeader?: boolean
+  isFollower?: boolean
 }
 
 const PULSE_ITEMS: Array<{ key: keyof PulseResources; label: string; max: number }> = [
@@ -46,6 +49,8 @@ export function AgentCard({
   onStart,
   onStop,
   onRemove,
+  isLeader,
+  isFollower,
 }: AgentCardProps) {
   const { charState, status, characterName, entries } = agent
   const cls = charState?.class ?? ""
@@ -75,8 +80,20 @@ export function AgentCard({
     >
       {/* Name + class/level + optional remove button */}
       <div className="flex items-baseline justify-between gap-2">
-        <span className="font-heading text-sm text-[color:var(--wyr-accent)] truncate">
-          {characterName}
+        <span className="flex items-center gap-1 min-w-0">
+          <span className="font-heading text-sm text-[color:var(--wyr-accent)] truncate">
+            {characterName}
+          </span>
+          {isLeader && (
+            <span title="Party leader" aria-label="Party leader" className="shrink-0 flex items-center">
+              <Crown className="w-3 h-3 text-[color:var(--wyr-accent)]" />
+            </span>
+          )}
+          {isFollower && (
+            <span title="Party follower" aria-label="Party follower" className="shrink-0 flex items-center">
+              <Link2 className="w-3 h-3 text-muted-foreground" />
+            </span>
+          )}
         </span>
         <div className="flex items-center gap-1.5 shrink-0">
           {(cls || level) && (

@@ -188,16 +188,10 @@ export function usePartyMode(
         const follower = agentsRef.current.get(followerId)
         if (!follower) return
         const sessionId = follower.sessionId
-        try {
-          await callAction(sessionId, "social", { action: "follow" })
-        } catch {
-          // ignore individual failure
-        }
-        try {
-          await callAction(sessionId, "social", { action: "party_leave", params: {} })
-        } catch {
-          // ignore individual failure
-        }
+        await Promise.all([
+          callAction(sessionId, "social", { action: "follow" }).catch(() => {}),
+          callAction(sessionId, "social", { action: "party_leave" }).catch(() => {}),
+        ])
       }),
     )
 

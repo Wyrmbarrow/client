@@ -20,6 +20,8 @@ export function useParty({ llmConfig }: UsePartyOptions) {
   useLayoutEffect(() => { agentsRef.current = agents })
 
   const streamsRef = useRef<Map<string, ReturnType<typeof createStreamManager>>>(new Map())
+  // Track pending auto-restart timers so we can cancel them if startAgent is called explicitly.
+  const restartTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
 
   const updateAgent = useCallback((agentId: string, updates: Partial<AgentState>) => {
     setAgents(prev => {
@@ -137,6 +139,14 @@ export function useParty({ llmConfig }: UsePartyOptions) {
 
     const isFollower = opts?.isFollower ?? false
 
+    // Cancel any pending auto-restart timer for this agent so that an explicit
+    // startAgent call (e.g. from deactivate) isn't overwritten by a stale onDone timeout.
+    const existingTimer = restartTimersRef.current.get(agentId)
+    if (existingTimer !== undefined) {
+      clearTimeout(existingTimer)
+      restartTimersRef.current.delete(agentId)
+    }
+
     let stream = streamsRef.current.get(agentId)
     if (!stream) {
       stream = createStreamManager()
@@ -168,7 +178,11 @@ export function useParty({ llmConfig }: UsePartyOptions) {
           // The patron has an explicit Stop button to halt the agent intentionally.
           // Use a longer pause on "stop" so the patron can read the final output.
           const delay = reason === "stop" ? 2000 : 500
-          setTimeout(() => startAgent(agentId, { isFollower }), delay)
+          const timer = setTimeout(() => {
+            restartTimersRef.current.delete(agentId)
+            startAgent(agentId, { isFollower })
+          }, delay)
+          restartTimersRef.current.set(agentId, timer)
         },
         onError: (message) => {
           addEntry(agentId, {

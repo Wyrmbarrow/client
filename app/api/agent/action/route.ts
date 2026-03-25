@@ -24,8 +24,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "tool is required" }, { status: 400 })
   }
 
-  const toolParams: Record<string, unknown> =
+  const PARTY_ACTION_TOOLS = new Set(["party_invite", "party_accept", "social"])
+  if (!PARTY_ACTION_TOOLS.has(tool)) {
+    return NextResponse.json({ error: `Tool not allowed: ${tool}` }, { status: 403 })
+  }
+
+  const rawParams: Record<string, unknown> =
     params && typeof params === "object" && !Array.isArray(params) ? params : {}
+  const { session_id: _dropped, ...toolParams } = rawParams
 
   try {
     const tools = await getMCPTools()

@@ -159,19 +159,19 @@ function SessionInner({
         .addAgent(credentials, handoff.sessionId, handoff.characterName, handoff.bootstrap)
         .then((agentId) => party.startAgent(agentId))
     } else {
-      // Reload: re-login each agent from saved roster
+      // Reload: re-login each agent from saved roster (sequential to avoid MCP rate limit)
       const roster = loadPartyRoster()
-      for (const credentials of roster) {
-        ;(async () => {
+      ;(async () => {
+        for (const credentials of roster) {
           try {
             const res = await fetch("/api/agent/init", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ mode: "login", charName: credentials.name, password: credentials.password }),
             })
-            if (!res.ok) return
+            if (!res.ok) continue
             const data = await res.json()
-            if (!data.sessionId) return
+            if (!data.sessionId) continue
             const agentId = await party.addAgent(
               credentials,
               data.sessionId,
@@ -182,8 +182,8 @@ function SessionInner({
           } catch {
             // silently skip — agent will show as missing
           }
-        })()
-      }
+        }
+      })()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])

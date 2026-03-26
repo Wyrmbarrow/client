@@ -33,6 +33,14 @@ export interface CharacterState {
   isDying?: boolean
   /** e.g. { "wolf-l6vt": "near" } */
   engagementZones?: Record<string, string>
+  /** True when the character is dead and in spirit form */
+  isDead?: boolean
+  /** True when look() returns spirit_vision (dead character perspective) */
+  spiritVision?: boolean
+  /** Minutes remaining until auto-revival */
+  minutesUntilRevival?: number
+  /** Wall-clock time string when revival occurs */
+  revivalAvailableAt?: string
 }
 
 export interface PulseResources {

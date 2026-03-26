@@ -1,13 +1,14 @@
 "use client"
 
-import type { RoomState, ExitInfo } from "@/lib/types"
+import type { RoomState, ExitInfo, CharacterState } from "@/lib/types"
 import { Badge } from "@/components/ui/badge"
 
 interface RoomPanelProps {
   room: RoomState | null
+  charState?: CharacterState | null
 }
 
-export function RoomPanel({ room }: RoomPanelProps) {
+export function RoomPanel({ room, charState }: RoomPanelProps) {
   if (!room) {
     return (
       <div className="border-t border-[color:var(--wyr-border)] px-3 py-3">
@@ -42,6 +43,19 @@ export function RoomPanel({ room }: RoomPanelProps) {
               className="font-mono text-[7px] tracking-widest uppercase h-4 border-green-800/40 text-green-500/80 bg-green-900/20"
             >
               Sanctuary
+            </Badge>
+          )}
+          {charState?.isDead && (
+            <Badge
+              variant="outline"
+              className="font-mono text-[7px] tracking-widest uppercase h-4"
+              style={{
+                borderColor: "rgba(160,135,88,0.3)",
+                color: "rgba(160,135,88,0.8)",
+                background: "rgba(160,135,88,0.1)",
+              }}
+            >
+              Spirit Vision
             </Badge>
           )}
         </div>

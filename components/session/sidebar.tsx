@@ -1,6 +1,6 @@
 "use client"
 
-import type { AgentState, RoomState } from "@/lib/types"
+import type { AgentState, CharacterState, RoomState } from "@/lib/types"
 import type { PartyModeState } from "@/hooks/use-party-mode"
 import { AgentCard } from "@/components/session/agent-card"
 import { RoomPanel } from "@/components/session/room-panel"
@@ -10,6 +10,7 @@ interface SidebarProps {
   agents: Map<string, AgentState>
   focusedAgentId: string | null
   roomState: RoomState | null
+  charState?: CharacterState | null
   onFocusAgent: (agentId: string) => void
   onStartAgent: (agentId: string) => void
   onStopAgent: (agentId: string) => void
@@ -24,6 +25,7 @@ export function Sidebar({
   agents,
   focusedAgentId,
   roomState,
+  charState,
   onFocusAgent,
   onStartAgent,
   onStopAgent,
@@ -65,7 +67,7 @@ export function Sidebar({
       </div>
 
       {/* Room panel — pinned to bottom */}
-      <RoomPanel room={roomState} />
+      <RoomPanel room={roomState} charState={charState} />
     </aside>
   )
 }

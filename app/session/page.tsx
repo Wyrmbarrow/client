@@ -272,6 +272,7 @@ function SessionInner({
           agents={party.agents}
           focusedAgentId={party.focusedAgentId}
           roomState={focusedAgent?.roomState ?? null}
+          charState={focusedAgent?.charState ?? null}
           onFocusAgent={party.setFocus}
           onStartAgent={party.startAgent}
           onStopAgent={party.stopAgent}

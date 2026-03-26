@@ -14,6 +14,8 @@ export default function LookEvent({ result, roomState }: Props) {
   const hub         = room?.hub ?? roomState?.hub
   const sanctuary   = room?.is_sanctuary ?? roomState?.isSanctuary ?? false
   const desc        = room?.description ?? room?.desc ?? roomState?.description ?? ""
+  const spiritVision = r?.spirit_vision === true
+  const minutesUntilRevival: number | undefined = r?.minutes_until_revival
   const exits: string[] = room?.exits
     ? room.exits.map((e: unknown) => typeof e === "string" ? e : (e as Record<string, string>)?.key ?? (e as Record<string, string>)?.direction ?? (e as Record<string, string>)?.name ?? String(e))
     : roomState?.exits?.map(e => e.key) ?? []
@@ -39,6 +41,17 @@ export default function LookEvent({ result, roomState }: Props) {
                 color: "rgba(100,180,110,0.8)",
               }}>
               Sanctuary
+            </span>
+          )}
+          {spiritVision && (
+            <span className="font-mono text-[9px] px-1.5 py-0.5 rounded-sm"
+              style={{
+                background: "rgba(160,135,88,0.15)",
+                border: "1px solid rgba(160,135,88,0.3)",
+                color: "rgba(160,135,88,0.8)",
+              }}>
+              Spirit Vision
+              {minutesUntilRevival != null && ` — ${minutesUntilRevival}m to revival`}
             </span>
           )}
         </div>

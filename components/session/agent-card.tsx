@@ -1,6 +1,6 @@
 "use client"
 
-import { Crown, Link2 } from "lucide-react"
+import { Crown, Link2, Skull } from "lucide-react"
 import type { AgentState, PulseResources } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
@@ -59,6 +59,7 @@ export function AgentCard({
   const hpMax = charState?.hpMax ?? 1
   const hpPct = hpMax > 0 ? Math.max(0, Math.min(1, hpCurrent / hpMax)) : 0
   const resources = charState?.resources
+  const isDead = charState?.isDead
 
   const lastEntry = entries[entries.length - 1]
   const lastActivity = lastEntry
@@ -113,52 +114,70 @@ export function AgentCard({
         </div>
       </div>
 
-      {/* HP bar */}
-      <div className="space-y-0.5">
-        <div className="flex items-center justify-between">
-          <span className="font-mono text-[8px] tracking-widest uppercase text-muted-foreground">
-            HP
-          </span>
-          <span className="font-mono text-[9px]" style={{ color: hpColor(hpPct) }}>
-            {hpCurrent}/{hpMax}
-          </span>
+      {/* Spirit state or HP bar */}
+      {isDead ? (
+        <div className="space-y-1">
+          <div className="flex items-center gap-1.5">
+            <Skull className="w-3 h-3 text-[color:var(--wyr-muted)]" />
+            <span className="font-mono text-[9px] tracking-widest uppercase text-[color:var(--wyr-muted)]">
+              Spirit
+            </span>
+          </div>
+          {charState?.minutesUntilRevival != null && (
+            <span className="font-mono text-[8px] text-[color:var(--wyr-muted)]">
+              Revival in {charState.minutesUntilRevival}m
+            </span>
+          )}
         </div>
-        <div className="h-1 w-full rounded-full bg-muted/30">
-          <div
-            className="h-full rounded-full transition-all duration-300"
-            style={{
-              width: `${Math.round(hpPct * 100)}%`,
-              backgroundColor: hpColor(hpPct),
-            }}
-          />
-        </div>
-      </div>
-
-      {/* Pulse resource badges */}
-      {resources && (
-        <div className="flex gap-1.5">
-          {PULSE_ITEMS.map(({ key, label, max }) => {
-            const val = resources[key] ?? 0
-            const filled = val >= max
-            return (
-              <span
-                key={key}
-                className="font-mono text-[7px] tracking-wider uppercase px-1.5 py-0.5 rounded-sm"
-                style={{
-                  backgroundColor: filled
-                    ? "rgba(205,125,28,0.2)"
-                    : "rgba(160,135,88,0.1)",
-                  color: filled
-                    ? "var(--wyr-accent)"
-                    : "var(--wyr-muted)",
-                  border: `1px solid ${filled ? "rgba(205,125,28,0.3)" : "rgba(160,135,88,0.15)"}`,
-                }}
-              >
-                {label}
+      ) : (
+        <>
+          <div className="space-y-0.5">
+            <div className="flex items-center justify-between">
+              <span className="font-mono text-[8px] tracking-widest uppercase text-muted-foreground">
+                HP
               </span>
-            )
-          })}
-        </div>
+              <span className="font-mono text-[9px]" style={{ color: hpColor(hpPct) }}>
+                {hpCurrent}/{hpMax}
+              </span>
+            </div>
+            <div className="h-1 w-full rounded-full bg-muted/30">
+              <div
+                className="h-full rounded-full transition-all duration-300"
+                style={{
+                  width: `${Math.round(hpPct * 100)}%`,
+                  backgroundColor: hpColor(hpPct),
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Pulse resource badges */}
+          {resources && (
+            <div className="flex gap-1.5">
+              {PULSE_ITEMS.map(({ key, label, max }) => {
+                const val = resources[key] ?? 0
+                const filled = val >= max
+                return (
+                  <span
+                    key={key}
+                    className="font-mono text-[7px] tracking-wider uppercase px-1.5 py-0.5 rounded-sm"
+                    style={{
+                      backgroundColor: filled
+                        ? "rgba(205,125,28,0.2)"
+                        : "rgba(160,135,88,0.1)",
+                      color: filled
+                        ? "var(--wyr-accent)"
+                        : "var(--wyr-muted)",
+                      border: `1px solid ${filled ? "rgba(205,125,28,0.3)" : "rgba(160,135,88,0.15)"}`,
+                    }}
+                  >
+                    {label}
+                  </span>
+                )
+              })}
+            </div>
+          )}
+        </>
       )}
 
       {/* Status + last activity */}

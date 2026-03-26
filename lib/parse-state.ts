@@ -27,6 +27,12 @@ export function parseCharacterState(toolName: string, result: unknown): Characte
   // HP/class/level/AC may be in a nested charsheet or directly on the sheet
   const sub: AnyObj = sheet.charsheet ?? sheet
 
+  // Spirit/death fields live at the top level of the response (not in character/charsheet)
+  const isDead = sheet.is_dead ?? sheet.dead ?? r.spirit?.is_spirit ?? false
+  const spiritVision = r.spirit_vision ?? false
+  const minutesUntilRevival = r.minutes_until_revival ?? r.spirit?.minutes_until_revival ?? undefined
+  const revivalAvailableAt = r.revival_available_at ?? r.spirit?.revival_available_at ?? undefined
+
   return {
     name:            sheet.name ?? sub.name ?? "",
     class:           sub.class ?? undefined,
@@ -39,6 +45,10 @@ export function parseCharacterState(toolName: string, result: unknown): Characte
     resources:       parsePulseResources(sheet.pulse_resources ?? r.pulse_resources),
     isDying:         sheet.is_dying ?? false,
     engagementZones: sheet.engagement_zones ?? undefined,
+    isDead:          isDead || undefined,
+    spiritVision:    spiritVision || undefined,
+    minutesUntilRevival: minutesUntilRevival,
+    revivalAvailableAt:  revivalAvailableAt,
   }
 }
 

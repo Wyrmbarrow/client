@@ -248,6 +248,8 @@ function charStateFromBootstrap(bootstrap: unknown): CharacterState | null {
     if (!char) return null
     const cs = char.charsheet as Record<string, unknown>
     const pr = char.pulse_resources as Record<string, number> | undefined
+    // Login response includes resp.spirit = { is_spirit, minutes_until_revival, ... }
+    const spirit = b?.spirit as Record<string, unknown> | undefined
     return {
       name: char.name as string,
       class: cs?.class as string | undefined,
@@ -264,6 +266,10 @@ function charStateFromBootstrap(bootstrap: unknown): CharacterState | null {
         reaction: pr.reaction ?? 0,
         chat: pr.chat ?? 0,
       } : undefined,
+      isDead: spirit?.is_spirit ? true : undefined,
+      spiritVision: spirit?.is_spirit ? true : undefined,
+      minutesUntilRevival: spirit?.minutes_until_revival as number | undefined,
+      revivalAvailableAt: spirit?.revival_available_at as string | undefined,
     }
   } catch {
     return null

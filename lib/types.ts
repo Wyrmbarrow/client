@@ -13,6 +13,7 @@ export type AgentEvent =
   | { type: "state";       state: CharacterState }
   | { type: "resources";   resources: PulseResources }
   | { type: "room";        room: RoomState }
+  | { type: "command";     toolName: string; action: string; result: unknown }
   | { type: "done";        reason: string }
   | { type: "error";       message: string }
 

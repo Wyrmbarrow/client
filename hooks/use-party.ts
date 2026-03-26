@@ -215,6 +215,69 @@ export function useParty({ llmConfig }: UsePartyOptions) {
     setTimeout(() => startAgent(agentId, { nudge: text }), 100)
   }, [stopAgent, startAgent])
 
+  const executeCommand = useCallback(
+    async (agentId: string, toolName: string, action: string, params: Record<string, string>) => {
+      const agent = agentsRef.current.get(agentId)
+      if (!agent) return
+
+      try {
+        const res = await fetch("/api/agent/command", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sessionId: agent.sessionId,
+            toolName,
+            action,
+            params,
+          }),
+        })
+
+        if (!res.ok) {
+          const error = await res.text()
+          addEntry(agentId, {
+            id: crypto.randomUUID(),
+            timestamp: Date.now(),
+            event: {
+              type: "error",
+              message: `Command failed: ${error}`,
+            },
+          })
+          return
+        }
+
+        const result = await res.json()
+        addEntry(agentId, {
+          id: crypto.randomUUID(),
+          timestamp: Date.now(),
+          event: {
+            type: "command",
+            toolName,
+            action,
+            result,
+          },
+        })
+
+        // Update state if the result includes state updates
+        if (result.charState) {
+          updateAgent(agentId, { charState: result.charState })
+        }
+        if (result.roomState) {
+          updateAgent(agentId, { roomState: result.roomState })
+        }
+      } catch (err) {
+        addEntry(agentId, {
+          id: crypto.randomUUID(),
+          timestamp: Date.now(),
+          event: {
+            type: "error",
+            message: `Command error: ${(err as Error).message}`,
+          },
+        })
+      }
+    },
+    [addEntry, updateAgent]
+  )
+
   return {
     agents,
     focusedAgentId,
@@ -228,6 +291,7 @@ export function useParty({ llmConfig }: UsePartyOptions) {
     setDirective,
     setPartyDirective,
     nudge,
+    executeCommand,
     setCharState: (agentId: string, state: CharacterState) => updateAgent(agentId, { charState: state }),
     setRoomState: (agentId: string, state: RoomState) => updateAgent(agentId, { roomState: state }),
     setPollTime: (agentId: string, tool: "character" | "look") => {

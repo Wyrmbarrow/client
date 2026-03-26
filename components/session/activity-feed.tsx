@@ -12,6 +12,8 @@ import SpeakEvent from "@/components/feed/speak-event"
 import JournalEvent from "@/components/feed/journal-event"
 import CombatEvent from "@/components/feed/combat-event"
 import ShopEvent from "@/components/feed/shop-event"
+import QuestEvent from "@/components/feed/quest-event"
+import CharacterEvent from "@/components/feed/character-event"
 import GenericEvent from "@/components/feed/generic-event"
 
 interface InspectData {
@@ -50,6 +52,7 @@ export function ActivityFeed({ entries, roomState }: ActivityFeedProps) {
   const bottomRef = useRef<HTMLDivElement>(null)
   const isAtBottomRef = useRef(true)
   const [inspect, setInspect] = useState<InspectData | null>(null)
+  const [copied, setCopied] = useState(false)
 
   // Track whether the user has scrolled away from the bottom via IntersectionObserver.
   // New entries only auto-scroll when the bottom sentinel is already visible.
@@ -72,6 +75,17 @@ export function ActivityFeed({ entries, roomState }: ActivityFeedProps) {
 
   const repeatLooks = findRepeatLooks(entries)
   const onInspect = useCallback((data: InspectData) => setInspect(data), [])
+
+  const handleCopy = useCallback(async () => {
+    if (!inspect) return
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(inspect.data, null, 2))
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch (err) {
+      console.error('Failed to copy:', err)
+    }
+  }, [inspect])
 
   return (
     <>
@@ -101,10 +115,16 @@ export function ActivityFeed({ entries, roomState }: ActivityFeedProps) {
 
       <Dialog open={inspect !== null} onOpenChange={(open) => { if (!open) setInspect(null) }}>
         <DialogContent className="bg-[var(--wyr-panel)] border-[color:var(--wyr-border)] sm:max-w-lg max-h-[80vh] overflow-hidden flex flex-col">
-          <DialogHeader>
+          <DialogHeader className="flex items-center justify-between">
             <DialogTitle className="font-mono text-xs tracking-widest uppercase text-[color:var(--wyr-accent)]">
               {inspect?.label}
             </DialogTitle>
+            <button
+              onClick={handleCopy}
+              className="ml-auto font-mono text-[9px] px-2 py-1 rounded border border-[color:var(--wyr-border)] text-[color:var(--wyr-text)] hover:bg-[color:var(--wyr-muted)]/10 transition-colors"
+            >
+              {copied ? "✓ Copied" : "Copy"}
+            </button>
           </DialogHeader>
           <div className="flex-1 overflow-auto rounded border border-[color:var(--wyr-border)] bg-black/20 p-3">
             <pre className="font-mono text-[10px] leading-relaxed text-[color:var(--wyr-text)] whitespace-pre-wrap break-words">
@@ -156,6 +176,128 @@ function FeedRow({
 
   if (event.type === "tool_call") {
     return <ToolCallRow tool={event.tool} input={event.input} onInspect={onInspect} />
+  }
+
+  if (event.type === "command") {
+    // event.result is the full API response: { result: MCP_RESULT, charState?: ..., roomState?: ... }
+    // Extract the actual MCP result
+    const apiResponse = event.result as Record<string, unknown>
+    const mcpResult = apiResponse.result ?? apiResponse
+
+    const inspectResult = () => onInspect({ label: `${event.toolName} ${event.action}`, data: mcpResult })
+    const resultWrapper = (children: React.ReactNode) => (
+      <div
+        className="cursor-pointer hover:bg-[var(--wyr-muted)]/5 transition-colors rounded"
+        onClick={inspectResult}
+      >
+        {children}
+      </div>
+    )
+
+    // Special formatting for quest results
+    if (event.toolName === "quest") {
+      return resultWrapper(
+        <div className="px-3 py-1">
+          <div className="flex items-baseline gap-2 mb-2">
+            <span className="font-mono text-[8px] text-[color:var(--wyr-accent)]/60 tracking-widest">PATRON</span>
+            <span className="font-mono text-[9px] text-[color:var(--wyr-accent)]">quest</span>
+            {event.action !== "default" && (
+              <span className="font-mono text-[9px] text-[color:var(--wyr-muted)]">{event.action}</span>
+            )}
+          </div>
+          <QuestEvent result={mcpResult} />
+        </div>
+      )
+    }
+
+    // Special formatting for move results — show direction header + full room card
+    if (event.toolName === "move") {
+      // Unwrap nested MCP result — try multiple levels since execute() wraps the response
+      let moveData: Record<string, unknown> = mcpResult as Record<string, unknown>
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const tryParse = (obj: any): Record<string, unknown> | null => {
+        try {
+          const text = obj?.result?.content?.[0]?.text ?? obj?.content?.[0]?.text
+          if (typeof text === "string") return JSON.parse(text)
+        } catch { /* noop */ }
+        return null
+      }
+      moveData = tryParse(moveData) ?? tryParse(moveData?.result) ?? moveData
+      const direction = String(moveData.direction ?? "")
+      const from = String(moveData.from ?? "")
+
+      return resultWrapper(
+        <div className="px-3 py-1 space-y-2">
+          <div className="flex items-baseline gap-2">
+            <span className="font-mono text-[8px] text-[color:var(--wyr-accent)]/60 tracking-widest">PATRON</span>
+            <span className="font-mono text-[9px] text-[color:var(--wyr-muted)]">
+              <span className="text-[color:var(--wyr-accent)]">{direction}</span>
+              {from && <> from {from}</>}
+            </span>
+          </div>
+          <LookEvent result={moveData} roomState={roomState} />
+        </div>
+      )
+    }
+
+    // Special formatting for character status — full character sheet
+    if (event.toolName === "character") {
+      // Unwrap nested MCP result
+      let charData: Record<string, unknown> = mcpResult as Record<string, unknown>
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const tryParse = (obj: any): Record<string, unknown> | null => {
+        try {
+          const text = obj?.result?.content?.[0]?.text ?? obj?.content?.[0]?.text
+          if (typeof text === "string") return JSON.parse(text)
+        } catch { /* noop */ }
+        return null
+      }
+      charData = tryParse(charData) ?? tryParse(charData?.result) ?? charData
+
+      return resultWrapper(
+        <div className="px-3 py-1 space-y-2">
+          <div className="flex items-baseline gap-2">
+            <span className="font-mono text-[8px] text-[color:var(--wyr-accent)]/60 tracking-widest">PATRON</span>
+            <span className="font-mono text-[9px] text-[color:var(--wyr-accent)]">character</span>
+            {event.action !== "default" && event.action !== "status" && (
+              <span className="font-mono text-[9px] text-[color:var(--wyr-muted)]">{event.action}</span>
+            )}
+          </div>
+          <CharacterEvent result={charData} />
+        </div>
+      )
+    }
+
+    // Special formatting for shop results — reuse ShopEvent with unwrapped data
+    if (event.toolName === "shop") {
+      let shopData: Record<string, unknown> = mcpResult as Record<string, unknown>
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const tryParse = (obj: any): Record<string, unknown> | null => {
+        try {
+          const text = obj?.result?.content?.[0]?.text ?? obj?.content?.[0]?.text
+          if (typeof text === "string") return JSON.parse(text)
+        } catch { /* noop */ }
+        return null
+      }
+      shopData = tryParse(shopData) ?? tryParse(shopData?.result) ?? shopData
+
+      return resultWrapper(
+        <div className="px-3 py-1">
+          <ShopEvent input={{ action: event.action }} result={shopData} />
+        </div>
+      )
+    }
+
+    // Generic command display
+    return resultWrapper(
+      <div className="px-4 py-1.5 flex items-baseline gap-2">
+        <span className="font-mono text-[8px] text-[color:var(--wyr-accent)]/60 tracking-widest">PATRON</span>
+        <span className="font-mono text-[9px] text-[color:var(--wyr-accent)]">{event.toolName}</span>
+        {event.action !== "default" && (
+          <span className="font-mono text-[9px] text-[color:var(--wyr-muted)]">{event.action}</span>
+        )}
+      </div>
+    )
   }
 
   if (event.type !== "tool_result") return null

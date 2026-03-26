@@ -37,32 +37,59 @@ function ShopBrowse({ result, isError }: SubProps) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const items: any[] = Array.isArray(result?.items) ? result.items : []
   const shopName = result?.shop ?? result?.vendor ?? ""
+  const gold = result?.gold ?? null
+  const sellRate = result?.sell_rate ?? null
+
+  // Group items by category
+  const categories = new Map<string, typeof items>()
+  for (const item of items) {
+    const cat = item.category ?? "other"
+    if (!categories.has(cat)) categories.set(cat, [])
+    categories.get(cat)!.push(item)
+  }
 
   return (
-    <div className="rounded-md border border-[color:var(--wyr-border)] bg-[var(--wyr-panel)] px-4 pt-3 pb-4 space-y-2">
-      <div className="flex items-baseline gap-2">
+    <div className="corner-ornaments rounded-md border border-[color:var(--wyr-border)] bg-[var(--wyr-panel)] px-4 pt-3 pb-4 space-y-2">
+      <div className="flex items-baseline gap-2 flex-wrap">
         <span className="font-mono text-[9px] tracking-[0.2em] uppercase text-[color:var(--wyr-muted)]">shop</span>
-        <span className="font-mono text-[9px] text-[color:var(--wyr-muted)]">browse</span>
         {shopName && (
           <span className="font-heading text-sm text-[color:var(--wyr-accent)]">{shopName}</span>
+        )}
+        {gold != null && (
+          <span className="font-mono text-[9px] text-[color:var(--wyr-muted)] ml-auto">
+            Your gold: <span className="text-[color:var(--wyr-accent)]">{gold}</span>
+          </span>
         )}
       </div>
       {isError ? (
         <p className="font-mono text-[10px] text-[color:var(--wyr-danger)]">{result.error}</p>
       ) : items.length > 0 ? (
-        <ul className="space-y-1">
-          {items.map((item, i) => (
-            <li key={i} className="font-mono text-[10px] flex gap-2 items-baseline text-[color:var(--wyr-muted)]">
-              <span className="text-foreground">{item.name ?? item.key ?? "Item"}</span>
-              {item.price != null && (
-                <span className="text-[color:var(--wyr-accent)]">{item.price} gp</span>
-              )}
-              {item.description && (
-                <span className="text-[color:var(--wyr-muted)] truncate">{item.description}</span>
-              )}
-            </li>
+        <div className="space-y-2">
+          {[...categories.entries()].map(([cat, catItems]) => (
+            <div key={cat}>
+              <div className="font-mono text-[7px] font-bold uppercase tracking-[0.12em] text-[color:var(--wyr-accent)]/60 mb-1">
+                {cat}
+              </div>
+              {catItems.map((item, i) => (
+                <div key={i} className="font-mono text-[10px] flex gap-2 items-baseline py-0.5">
+                  <span className="text-foreground min-w-0">{item.name ?? item.key ?? "Item"}</span>
+                  <span className="text-[color:var(--wyr-border)] flex-1 overflow-hidden" style={{ borderBottom: "1px dotted", marginBottom: 2 }} />
+                  {item.stock != null && (
+                    <span className="text-[color:var(--wyr-muted)] shrink-0">×{item.stock}</span>
+                  )}
+                  {item.price != null && (
+                    <span className="text-[color:var(--wyr-accent)] shrink-0">{item.price} gp</span>
+                  )}
+                </div>
+              ))}
+            </div>
           ))}
-        </ul>
+          {sellRate != null && (
+            <p className="font-mono text-[8px] text-[color:var(--wyr-muted)] pt-1">
+              Sells back at {Math.round(sellRate * 100)}% value
+            </p>
+          )}
+        </div>
       ) : (
         <p className="font-mono text-[10px] text-[color:var(--wyr-muted)]">No items available.</p>
       )}

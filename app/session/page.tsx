@@ -289,6 +289,7 @@ function SessionInner({
           <PatronInput
             key={focusedAgent?.agentId ?? "none"}
             agent={focusedAgent}
+            roomState={focusedAgent?.roomState ?? null}
             onStart={() => {
               if (party.focusedAgentId) party.startAgent(party.focusedAgentId)
             }}
@@ -300,6 +301,11 @@ function SessionInner({
             }}
             onNudge={(text) => {
               if (party.focusedAgentId) party.nudge(party.focusedAgentId, text)
+            }}
+            onCommand={(toolName, action, params) => {
+              if (party.focusedAgentId) {
+                party.executeCommand(party.focusedAgentId, toolName, action, params)
+              }
             }}
           />
         </div>

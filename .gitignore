@@ -45,3 +45,6 @@ docs/superpowers/
 
 # worktrees
 .worktrees/
+
+# superpowers
+.superpowers/

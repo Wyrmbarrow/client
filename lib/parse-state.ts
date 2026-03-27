@@ -3,7 +3,7 @@
  * Called after every tool_result event to keep panels up to date.
  */
 
-import type { CharacterState, RoomState, ExitInfo, PulseResources } from "./types"
+import type { CharacterState, RoomState, ExitInfo, PulseResources, RoomMessage } from "./types"
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyObj = Record<string, any>
@@ -98,6 +98,20 @@ export function parseRoomState(toolName: string, result: unknown): RoomState | n
   const characterRefs = extractRefs(contents.characters ?? contents.agents ?? roomData.characters ?? roomData.agents)
   const objects: string[] = extractNames(contents.objects ?? roomData.objects)
 
+  const messages: RoomMessage[] = []
+  if (Array.isArray(r.messages)) {
+    for (const m of r.messages) {
+      if (m && typeof m === "object") {
+        messages.push({
+          type:      m.type ?? "",
+          from:      m.from ?? "",
+          text:      m.text ?? "",
+          timestamp: m.timestamp ?? "",
+        })
+      }
+    }
+  }
+
   return {
     name:        roomData.name ?? roomData.key ?? "Unknown",
     hub:         roomData.hub ?? undefined,
@@ -108,6 +122,7 @@ export function parseRoomState(toolName: string, result: unknown): RoomState | n
     characters,
     characterRefs,
     objects,
+    messages:    messages.length > 0 ? messages : undefined,
   }
 }
 

@@ -97,6 +97,10 @@ export function useParty({ llmConfig }: UsePartyOptions) {
       return next
     })
 
+    // Eagerly update the ref so startAgent (called in the same microtask via .then())
+    // can find the agent before React has committed the setAgents update.
+    agentsRef.current = new Map(agentsRef.current).set(agentId, newAgent)
+
     setFocusedAgentId(prev => prev ?? agentId)
 
     return agentId
@@ -176,8 +180,8 @@ export function useParty({ llmConfig }: UsePartyOptions) {
           // Always restart. The model finishing with "stop" just means it ran out of
           // things to say in one context window — not that the session is over.
           // The patron has an explicit Stop button to halt the agent intentionally.
-          // Use a longer pause on "stop" so the patron can read the final output.
-          const delay = reason === "stop" ? 2000 : 500
+          // Use longer pauses for rate limits and stop so the patron can read output.
+          const delay = reason === "rate_limited" ? 30_000 : reason === "stop" ? 2000 : 500
           const timer = setTimeout(() => {
             restartTimersRef.current.delete(agentId)
             startAgent(agentId, { isFollower })
@@ -387,6 +391,9 @@ function createStreamManager() {
       controller?.abort()
       controller = new AbortController()
 
+      let doneWasCalled = false
+      let saw429 = false
+
       try {
         const res = await fetch("/api/agent", {
           method: "POST",
@@ -415,7 +422,6 @@ function createStreamManager() {
         const reader = res.body.getReader()
         const decoder = new TextDecoder()
         let buffer = ""
-
         while (true) {
           const { done, value } = await reader.read()
           if (done) break
@@ -428,8 +434,12 @@ function createStreamManager() {
             try {
               const event = JSON.parse(line.slice(6))
               if (event.type === "done") {
+                doneWasCalled = true
                 callbacks.onDone(event.reason)
               } else if (event.type === "error") {
+                if (event.message?.includes("rate limit") || event.message?.includes("429")) {
+                  saw429 = true
+                }
                 callbacks.onError(event.message)
                 callbacks.onEvent({
                   id: crypto.randomUUID(),
@@ -450,6 +460,12 @@ function createStreamManager() {
         if ((err as Error).name !== "AbortError") {
           callbacks.onError((err as Error).message ?? String(err))
         }
+      }
+
+      // If the stream ended without an explicit done event (e.g. MCP error closed
+      // the stream early), trigger a restart so the agent doesn't silently stall.
+      if (!doneWasCalled && controller && !controller.signal.aborted) {
+        callbacks.onDone(saw429 ? "rate_limited" : "end")
       }
     },
     stop() {

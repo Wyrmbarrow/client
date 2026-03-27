@@ -78,6 +78,7 @@ export default function LookEvent({ result, roomState }: Props) {
             <RoomList label="Objects" items={objs} color="var(--wyr-muted)" />
           )}
         </div>
+
       </div>
     </div>
   )

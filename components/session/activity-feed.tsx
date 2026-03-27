@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import type { FeedEntry, RoomState } from "@/lib/types"
+import type { FeedEntry, RoomState, RoomMessage } from "@/lib/types"
 import { TOOL_CATEGORY } from "@/lib/tools"
 import ThinkingEvent from "@/components/feed/thinking-event"
 import LookEvent from "@/components/feed/look-event"
@@ -307,22 +307,29 @@ function FeedRow({
   const inspectResult = () => onInspect({ label: `${tool} response`, data: result })
 
   // Suppress the full look panel for repeat same-room looks — show a single compact line.
+  // Messages are always rendered separately below, even for collapsed looks.
   if (isRepeatLook) {
     const r = result as Record<string, unknown>
     const room = (r?.room ?? r) as Record<string, unknown>
     const desc = String(room?.description ?? room?.desc ?? "")
+    const repeatMessages: RoomMessage[] = Array.isArray(r?.messages) ? r.messages as RoomMessage[] : []
     return (
-      <div
-        className="px-4 py-0.5 flex items-baseline gap-2 cursor-pointer hover:bg-[var(--wyr-muted)]/5 transition-colors"
-        onClick={inspectResult}
-      >
-        <span className="font-mono text-[8px] uppercase tracking-widest text-[color:var(--wyr-muted)] shrink-0">look</span>
-        {desc && (
-          <span className="font-serif text-[11px] text-[color:var(--wyr-muted)] truncate">
-            {desc.slice(0, 90)}{desc.length > 90 ? "…" : ""}
-          </span>
-        )}
-      </div>
+      <>
+        <div
+          className="px-4 py-0.5 flex items-baseline gap-2 cursor-pointer hover:bg-[var(--wyr-muted)]/5 transition-colors"
+          onClick={inspectResult}
+        >
+          <span className="font-mono text-[8px] uppercase tracking-widest text-[color:var(--wyr-muted)] shrink-0">look</span>
+          {desc && (
+            <span className="font-serif text-[11px] text-[color:var(--wyr-muted)] truncate">
+              {desc.slice(0, 90)}{desc.length > 90 ? "…" : ""}
+            </span>
+          )}
+        </div>
+        {repeatMessages.map((msg, i) => (
+          <RoomMessageRow key={i} message={msg} />
+        ))}
+      </>
     )
   }
 
@@ -339,12 +346,23 @@ function FeedRow({
 
   switch (tool) {
     case "look":
-    case "explore":
-      return resultWrapper(
-        <div className="px-3 py-1">
-          <LookEvent result={result} roomState={roomState} />
-        </div>
+    case "explore": {
+      const lookMessages: RoomMessage[] = Array.isArray((result as Record<string, unknown>)?.messages)
+        ? (result as Record<string, unknown>).messages as RoomMessage[]
+        : []
+      return (
+        <>
+          {resultWrapper(
+            <div className="px-3 py-1">
+              <LookEvent result={result} roomState={roomState} />
+            </div>
+          )}
+          {lookMessages.map((msg, i) => (
+            <RoomMessageRow key={i} message={msg} />
+          ))}
+        </>
       )
+    }
     case "move":
       return resultWrapper(<MoveEvent input={input} result={result} />)
     case "speak":
@@ -370,6 +388,18 @@ function FeedRow({
     default:
       return resultWrapper(<GenericEvent tool={tool} input={input} result={result} />)
   }
+}
+
+/** Ambient room event — NPC arrival/departure, performance, etc. */
+function RoomMessageRow({ message }: { message: RoomMessage }) {
+  return (
+    <div className="px-4 py-0.5">
+      <p className="font-serif text-xs leading-relaxed italic"
+        style={{ color: "rgba(180,150,80,0.85)" }}>
+        {message.text}
+      </p>
+    </div>
+  )
 }
 
 /** Compact row shown when the agent initiates a tool call, before the result arrives. */

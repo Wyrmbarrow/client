@@ -19,13 +19,50 @@
 import { NextRequest } from "next/server"
 import { streamText, stepCountIs } from "ai"
 import { createOpenAI } from "@ai-sdk/openai"
-import { createMCPClient } from "@ai-sdk/mcp"
+import { getMCPTools, invalidateMCPSession } from "@/lib/mcp-session-manager"
 import { parseCharacterState, parseRoomState } from "@/lib/parse-state"
 import { parseMcpResult } from "@/lib/parse-mcp-result"
 import type { AgentEvent } from "@/lib/types"
 
-const MCP_URL = process.env.WYRMBARROW_MCP_URL ?? "https://mcp.wyrmbarrow.com/mcp"
 const MAX_STEPS = 50
+
+/**
+ * TransformStream that rewrites `reasoning_content` → `content` in SSE chunks.
+ * Some OpenAI-compatible models (e.g. glm4) stream all output as
+ * `reasoning_content` which @ai-sdk/openai ignores.
+ */
+function createReasoningTransform(): TransformStream<Uint8Array, Uint8Array> {
+  const decoder = new TextDecoder()
+  const encoder = new TextEncoder()
+  return new TransformStream({
+    transform(chunk, controller) {
+      const text = decoder.decode(chunk, { stream: true })
+      if (!text.includes("reasoning_content")) {
+        controller.enqueue(chunk)
+        return
+      }
+      const patched = text.replace(
+        /^data: (.+)$/gm,
+        (_line, json) => {
+          try {
+            const parsed = JSON.parse(json)
+            for (const choice of parsed.choices ?? []) {
+              const d = choice.delta
+              if (d && d.reasoning_content && !d.content) {
+                d.content = d.reasoning_content
+                d.reasoning_content = null
+              }
+            }
+            return `data: ${JSON.stringify(parsed)}`
+          } catch {
+            return _line
+          }
+        },
+      )
+      controller.enqueue(encoder.encode(patched))
+    },
+  })
+}
 
 export async function POST(req: NextRequest) {
   const signal = req.signal
@@ -53,14 +90,14 @@ export async function POST(req: NextRequest) {
         controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`))
       }
 
-      let mcpClient: Awaited<ReturnType<typeof createMCPClient>> | undefined
-
       try {
-        // Connect to Wyrmbarrow MCP
-        mcpClient = await createMCPClient({
-          transport: { type: "http", url: MCP_URL },
-        })
-        const tools = await mcpClient.tools()
+        // Only shallow-copy when we need to wrap the move tool for followers.
+        // Spreading the MCP tool map can lose non-enumerable properties that
+        // streamText depends on for schema generation.
+        const sharedTools = await getMCPTools()
+        const tools = isFollower && "move" in sharedTools
+          ? { ...sharedTools }
+          : sharedTools
 
         // Suppress room-exit moves for follower agents — zone moves (closer/farther) are still allowed
         if (isFollower && "move" in tools) {
@@ -80,22 +117,34 @@ export async function POST(req: NextRequest) {
           } as typeof originalMove
         }
 
-        // LLM provider — any OpenAI-compat endpoint
-        // Some servers (vLLM without --enable-auto-tool-choice) reject tool_choice: "auto".
-        // When noToolChoice is set, we strip the field so the model decides based on training.
+        // LLM provider — any OpenAI-compat endpoint.
+        // Custom fetch handles two quirks:
+        //  1. noToolChoice: strip tool_choice for servers that reject "auto"
+        //  2. reasoning_content → content: some models (e.g. glm4) stream all output
+        //     as reasoning_content which @ai-sdk/openai doesn't parse — remap it so
+        //     the SDK sees it as normal text-delta content.
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const provider = createOpenAI({ baseURL: llmBase.trim(), apiKey: llmKey.trim(), compatibility: "compatible", ...(noToolChoice && {
+        const provider = createOpenAI({ baseURL: llmBase.trim(), apiKey: llmKey.trim(), compatibility: "compatible",
           fetch: async (url: RequestInfo | URL, options?: RequestInit) => {
             if (options?.body) {
               try {
                 const body = JSON.parse(options.body as string)
-                delete body.tool_choice
-                return fetch(url, { ...options, body: JSON.stringify(body) })
+                if (noToolChoice) delete body.tool_choice
+                const resp = await fetch(url, { ...options, body: JSON.stringify(body) })
+                if (!resp.body) return resp
+                // Pipe through the reasoning transform — pipeThrough preserves
+                // the stream chain so the AI SDK reads from the transformed body.
+                const transformed = resp.body.pipeThrough(createReasoningTransform())
+                return new Response(transformed, {
+                  status: resp.status,
+                  statusText: resp.statusText,
+                  headers: resp.headers,
+                })
               } catch { /* fall through */ }
             }
             return fetch(url, options)
           },
-        }) } as Parameters<typeof createOpenAI>[0])
+        } as Parameters<typeof createOpenAI>[0])
         // .chat() forces /v1/chat/completions — provider(model) now defaults to /v1/responses in v3
 
         // Build system prompt, injecting active directive if present
@@ -209,11 +258,11 @@ export async function POST(req: NextRequest) {
               const status = (e as any)?.statusCode ?? (e as any)?.status
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               const body = (e as any)?.responseBody ?? (e as any)?.data
-              send({ type: "error", message: [
+              send({ type: "error", message: sanitizeMcpError([
                 status ? `HTTP ${status}` : null,
                 msg,
                 body ? `— ${typeof body === "string" ? body.slice(0, 200) : JSON.stringify(body).slice(0, 200)}` : null,
-              ].filter(Boolean).join(" ") })
+              ].filter(Boolean).join(" ")) })
               break
             }
           }
@@ -230,10 +279,13 @@ export async function POST(req: NextRequest) {
         }
       } catch (err) {
         if (!signal.aborted) {
-          send({ type: "error", message: err instanceof Error ? err.message : String(err) })
+          const msg = err instanceof Error ? err.message : String(err)
+          const is429 = msg.includes("429") || msg.includes("Too Many Requests")
+          // On non-429 errors the shared client may be in a bad state — drop it.
+          if (!is429) invalidateMCPSession()
+          send({ type: "error", message: sanitizeMcpError(msg) })
         }
       } finally {
-        await mcpClient?.close()
         controller.close()
       }
     },
@@ -247,6 +299,27 @@ export async function POST(req: NextRequest) {
       "X-Accel-Buffering": "no",
     },
   })
+}
+
+// ---------------------------------------------------------------------------
+// Sanitize MCP transport error messages before sending to the client.
+// The AI SDK MCP transport builds errors like:
+//   "MCP HTTP Transport Error: POSTing to endpoint (HTTP 429): <html>..."
+// Strip the raw nginx HTML body and replace with a clean status line.
+// ---------------------------------------------------------------------------
+
+function sanitizeMcpError(msg: string): string {
+  const httpMatch = msg.match(/MCP HTTP Transport Error[^(]*\(HTTP (\d+)\)/)
+  if (httpMatch) {
+    const status = httpMatch[1]
+    if (status === "429") return "MCP server rate limited (HTTP 429)"
+    return `MCP transport error (HTTP ${status})`
+  }
+  // Strip any stray HTML that leaked through from other sources
+  if (/<[a-z]/i.test(msg)) {
+    return msg.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 200)
+  }
+  return msg
 }
 
 // ---------------------------------------------------------------------------

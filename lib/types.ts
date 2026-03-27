@@ -62,6 +62,13 @@ export interface ExitInfo {
   destination: string | null
 }
 
+export interface RoomMessage {
+  type: string
+  from: string
+  text: string
+  timestamp: string
+}
+
 export interface RoomState {
   name: string
   hub?: number | string
@@ -73,6 +80,8 @@ export interface RoomState {
   /** Character refs for party operations (party_invite, follow). Parallel to characters[]. */
   characterRefs?: { name: string; ref: string }[]
   objects?: string[]
+  /** Ephemeral room messages returned by look (NPC arrivals/departures, ambient events). */
+  messages?: RoomMessage[]
 }
 
 // ---------------------------------------------------------------------------

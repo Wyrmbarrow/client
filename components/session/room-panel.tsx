@@ -1,6 +1,6 @@
 "use client"
 
-import type { RoomState, ExitInfo, CharacterState } from "@/lib/types"
+import type { RoomState, ExitInfo, CharacterState, RoomMessage } from "@/lib/types"
 import { Badge } from "@/components/ui/badge"
 
 interface RoomPanelProps {
@@ -22,7 +22,7 @@ export function RoomPanel({ room, charState }: RoomPanelProps) {
     )
   }
 
-  const { name, hub, isSanctuary, exits, npcs, characters, objects } = room
+  const { name, hub, isSanctuary, exits, npcs, characters, objects, messages } = room
 
   return (
     <div className="border-t border-[color:var(--wyr-border)] px-3 py-3 space-y-2 overflow-y-auto">
@@ -80,6 +80,11 @@ export function RoomPanel({ room, charState }: RoomPanelProps) {
       {objects && objects.length > 0 && (
         <RoomList label="Objects" items={objects} colorClass="text-muted-foreground" />
       )}
+
+      {/* Room messages (NPC arrivals/departures, ambient events) */}
+      {messages && messages.length > 0 && (
+        <MessageList messages={messages} />
+      )}
     </div>
   )
 }
@@ -97,6 +102,21 @@ function ExitList({ exits }: { exits: ExitInfo[] }) {
           </span>
         ))}
       </div>
+    </div>
+  )
+}
+
+function MessageList({ messages }: { messages: RoomMessage[] }) {
+  return (
+    <div className="space-y-1 pt-0.5">
+      <span className="font-mono text-[7px] uppercase tracking-widest text-muted-foreground">
+        Events
+      </span>
+      {messages.map((msg, i) => (
+        <p key={i} className="font-mono text-[9px] leading-relaxed" style={{ color: "rgba(180,150,80,0.85)" }}>
+          {msg.text}
+        </p>
+      ))}
     </div>
   )
 }

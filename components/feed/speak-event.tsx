@@ -44,11 +44,11 @@ export default function SpeakEvent({ input, result }: { input: Record<string, un
         )}
 
         {/* Skill check result */}
-        {skillCheck && (
+        {skillCheck && typeof skillCheck === "object" && (
           <div className="font-mono text-[9px] flex gap-2 text-[color:var(--wyr-muted)]">
-            <span>{skillCheck.skill}</span>
+            <span>{String(skillCheck.skill ?? "")}</span>
             <span style={{ color: skillCheck.success ? "rgba(100,180,110,0.8)" : "var(--wyr-danger)" }}>
-              {skillCheck.total >= 0 ? "+" : ""}{skillCheck.total} · {skillCheck.success ? "success" : "failure"}
+              {String(skillCheck.total).startsWith("-") ? "" : skillCheck.total >= 0 ? "+" : ""}{skillCheck.total} · {skillCheck.success ? "success" : "failure"}
             </span>
           </div>
         )}

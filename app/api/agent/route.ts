@@ -16,12 +16,13 @@
  *   - An unrecoverable error occurs
  */
 
-import { NextRequest } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { streamText, stepCountIs } from "ai"
 import { createOpenAI } from "@ai-sdk/openai"
 import { getMCPTools, invalidateMCPSession } from "@/lib/mcp-session-manager"
 import { parseCharacterState, parseRoomState } from "@/lib/parse-state"
 import { parseMcpResult } from "@/lib/parse-mcp-result"
+import { checkLLMRateLimit } from "@/lib/rate-limit"
 import type { AgentEvent } from "@/lib/types"
 
 const MAX_STEPS = 50
@@ -80,6 +81,22 @@ export async function POST(req: NextRequest) {
     noToolChoice,
     isFollower,
   } = await req.json()
+
+  // Pre-flight rate limit check: reject if LLM quota exhausted
+  const { allowed, resetAt } = checkLLMRateLimit(sessionId)
+  if (!allowed) {
+    const retryAfterSeconds = Math.ceil((resetAt - Date.now()) / 1000)
+    return NextResponse.json(
+      { error: "LLM rate limit exceeded" },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": String(retryAfterSeconds),
+          "X-RateLimit-Reset": new Date(resetAt).toISOString(),
+        },
+      },
+    )
+  }
 
   const encoder = new TextEncoder()
 
@@ -280,10 +297,19 @@ export async function POST(req: NextRequest) {
       } catch (err) {
         if (!signal.aborted) {
           const msg = err instanceof Error ? err.message : String(err)
-          const is429 = msg.includes("429") || msg.includes("Too Many Requests")
-          // On non-429 errors the shared client may be in a bad state — drop it.
-          if (!is429) invalidateMCPSession()
-          send({ type: "error", message: sanitizeMcpError(msg) })
+          const is429 = msg.includes("429") || msg.includes("Too Many Requests") || msg.includes("Rate limit") || msg.includes("Too many requests")
+          const isMcpError = msg.includes("MCP")
+
+          // On non-429, non-MCP errors the shared client may be in a bad state — drop it.
+          // On 429: keep the session alive — tearing it down creates more requests.
+          if (!is429 && !isMcpError) {
+            invalidateMCPSession()
+          }
+
+          const cleanMsg = is429
+            ? "LLM provider rate limited — client will retry with exponential backoff"
+            : sanitizeMcpError(msg)
+          send({ type: "error", message: cleanMsg })
         }
       } finally {
         controller.close()

@@ -199,6 +199,7 @@ export async function POST(req: NextRequest) {
           system,
           messages,
           tools,
+          maxRetries: 0,
           stopWhen: stepCountIs(MAX_STEPS),
           abortSignal: signal,
           onStepFinish({ toolResults }) {

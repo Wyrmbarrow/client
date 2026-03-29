@@ -44,7 +44,7 @@ export default function CombatEvent({ input, result }: { input: Record<string, u
             {r?.damage != null && (
               <div className="font-mono text-[10px] flex gap-2 text-[color:var(--wyr-muted)]">
                 <span>Damage</span>
-                <span className="font-semibold" style={{ color: "rgba(224,128,80,0.9)" }}>{r.damage}</span>
+                <span className="font-semibold" style={{ color: "rgba(224,128,80,0.9)" }}>{r.damage.total}</span>
                 {r?.damage_type && <span className="text-[color:var(--wyr-muted)]">{r.damage_type}</span>}
               </div>
             )}

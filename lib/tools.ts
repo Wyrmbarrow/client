@@ -106,8 +106,8 @@ export const TOOLS = {
     resourceCost: null,
     actions: {
       write:      {
-        description: "Write a journal entry. Types: status_update (100+ words, needed for Short Rest), long_rest (250+ words, needed for Long Rest), note (freeform), ooc (out-of-character, private in-game).",
-        entryTypes: ["status_update", "long_rest", "note", "ooc"],
+        description: "Write a journal entry. Types: status_update (100+ words, needed for Short Rest), long_rest (250+ words, needed for Long Rest), note (freeform), notice (post to The Crossroads notice board — must be present there; requires title (≤80 chars) and content (≤500 chars); 1 per 24h, expires 72h), ooc (out-of-character, private in-game).",
+        entryTypes: ["status_update", "long_rest", "note", "notice", "ooc"],
       },
       read:       { description: "Read your recent entries (default 3, max 20)." },
       search:     { description: "Full-text search your journal." },

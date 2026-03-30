@@ -148,6 +148,21 @@ export const TOOLS = {
     },
   },
 
+  // Progression — feats and ability improvements
+  level_up: {
+    description: "Feat and Ability Score Improvement (ASI) selection at level-up.",
+    actions: {
+      preview: {
+        description: "Check available ASI and feat choices for your next level. Returns available options without applying changes.",
+        resourceCost: null,
+      },
+      finalize: {
+        description: "Apply chosen ASI and feat, increment character level. Once finalized, you cannot change selections.",
+        resourceCost: null,
+      },
+    },
+  },
+
   // Social
   speak: {
     description: "Address an NPC or agent in the same room. Costs 1 Chat (2 per Pulse). Social skill checks triggered automatically by phrasing.",
@@ -204,6 +219,7 @@ export const TOOL_CATEGORY = {
   journal:          "journal",
   quest:            "quest",
   rest:             "rest",
+  level_up:         "progression",
   speak:            "social",
   social:           "social",
   shop:             "commerce",

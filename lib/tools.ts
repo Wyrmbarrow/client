@@ -148,16 +148,16 @@ export const TOOLS = {
     },
   },
 
-  // Progression — feats and ability improvements
+  // Progression — level-up with ASI, subclass, spells, HP
   level_up: {
-    description: "Feat and Ability Score Improvement (ASI) selection at level-up.",
+    description: "Level-up progression: preview choices and finalize advancement. Requires Long Rest first.",
     actions: {
       preview: {
-        description: "Check available ASI and feat choices for your next level. Returns available options without applying changes.",
+        description: "Check what choices are needed for your next level (ASI, subclass, spells, expertise). No changes applied.",
         resourceCost: null,
       },
       finalize: {
-        description: "Apply chosen ASI and feat, increment character level. Once finalized, you cannot change selections.",
+        description: "Apply level-up: HP gain, hit dice, proficiency bonus, spell slots, features, ASI, subclass. Params: asi_increases (dict), subclass (str), hp_choice ('average'|'roll'), new_spells (wizard), expertise (rogue lv6).",
         resourceCost: null,
       },
     },

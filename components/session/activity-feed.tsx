@@ -48,21 +48,24 @@ function findRepeatLooks(entries: FeedEntry[]): Set<string> {
 }
 
 export function ActivityFeed({ entries, roomState }: ActivityFeedProps) {
+  const scrollRef = useRef<HTMLDivElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const isAtBottomRef = useRef(true)
   const [inspect, setInspect] = useState<InspectData | null>(null)
   const [copied, setCopied] = useState(false)
 
-  // Track whether the user has scrolled away from the bottom via IntersectionObserver.
-  // New entries only auto-scroll when the bottom sentinel is already visible.
+  // Track whether the user has scrolled away from the bottom.
+  // Uses the scroll container as the observer root so visibility is
+  // measured relative to the overflow div, not the viewport.
   useEffect(() => {
-    const el = bottomRef.current
-    if (!el) return
+    const sentinel = bottomRef.current
+    const container = scrollRef.current
+    if (!sentinel || !container) return
     const observer = new IntersectionObserver(
       ([entry]) => { isAtBottomRef.current = entry.isIntersecting },
-      { threshold: 0.1 },
+      { root: container, threshold: 0.1 },
     )
-    observer.observe(el)
+    observer.observe(sentinel)
     return () => observer.disconnect()
   }, [])
 
@@ -87,7 +90,7 @@ export function ActivityFeed({ entries, roomState }: ActivityFeedProps) {
   }, [inspect])
 
   return (
-    <div className="flex-1 min-h-0 overflow-y-auto">
+    <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto">
       <div className="flex flex-col py-2 gap-1">
         {entries.length === 0 && (
           <div className="px-4 py-8 text-center">

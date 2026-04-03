@@ -17,7 +17,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server"
-import { streamText, stepCountIs } from "ai"
+import { streamText, stepCountIs, jsonSchema } from "ai"
 import { createOpenAI } from "@ai-sdk/openai"
 import { getMCPTools, invalidateMCPSession } from "@/lib/mcp-session-manager"
 import { parseCharacterState, parseRoomState } from "@/lib/parse-state"
@@ -80,6 +80,7 @@ export async function POST(req: NextRequest) {
     resumeContext,
     noToolChoice,
     isFollower,
+    todo,
   } = await req.json()
 
   // Pre-flight rate limit check: reject if global LLM quota exhausted
@@ -112,9 +113,10 @@ export async function POST(req: NextRequest) {
         // Spreading the MCP tool map can lose non-enumerable properties that
         // streamText depends on for schema generation.
         const sharedTools = await getMCPTools()
-        const tools = isFollower && "move" in sharedTools
-          ? { ...sharedTools }
-          : sharedTools
+        // Always copy — we add local tools (read_todo, update_todo) and
+        // may also wrap move for followers.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const tools: Record<string, any> = { ...sharedTools }
 
         // Suppress room-exit moves for follower agents — zone moves (closer/farther) are still allowed
         if (isFollower && "move" in tools) {
@@ -132,6 +134,34 @@ export async function POST(req: NextRequest) {
               return (originalMove as { execute: (p: unknown, c: unknown) => unknown }).execute(params, ctx)
             },
           } as typeof originalMove
+        }
+
+        // ── Local tools (execute in-process, no MCP round-trip) ──────────
+        let todoContent = todo || ""
+
+        tools["read_todo"] = {
+          description: "Read your current TODO list. Use this to review your plan after a session restart.",
+          inputSchema: jsonSchema({ type: "object", properties: {} }),
+          execute: async () => {
+            const text = todoContent || "(empty TODO list)"
+            return { status: "ok", todo: text }
+          },
+        }
+
+        tools["update_todo"] = {
+          description: "Update your TODO list with your current goals, plan, and important learnings. This persists across session restarts — your future self will see it. Full replacement: write your entire TODO each time.",
+          inputSchema: jsonSchema({
+            type: "object",
+            properties: {
+              content: { type: "string", description: "Full TODO list content (replaces existing)" },
+            },
+            required: ["content"],
+          }),
+          execute: async (params: { content: string }) => {
+            todoContent = params.content
+            send({ type: "todo_update", content: params.content })
+            return { status: "ok", message: "TODO list updated." }
+          },
         }
 
         // LLM provider — any OpenAI-compat endpoint.
@@ -168,6 +198,9 @@ export async function POST(req: NextRequest) {
         let system = systemPrompt ?? ""
         if (directive) {
           system += `\n\n## Current Patron Directive\n${directive}`
+        }
+        if (todo) {
+          system += `\n\n## Your TODO\n${todo}`
         }
 
         // Seed messages: session context + optional nudge

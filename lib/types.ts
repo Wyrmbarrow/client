@@ -14,6 +14,7 @@ export type AgentEvent =
   | { type: "resources";   resources: PulseResources }
   | { type: "room";        room: RoomState }
   | { type: "command";     toolName: string; action: string; result: unknown }
+  | { type: "todo_update"; content: string }
   | { type: "done";        reason: string }
   | { type: "error";       message: string }
 
@@ -127,4 +128,6 @@ export interface AgentState {
   lastLookPoll: number
   /** Bootstrap data from login — used on first run only */
   bootstrap: unknown
+  /** Persistent TODO list — survives 50-step restarts and page reloads */
+  todo: string
 }

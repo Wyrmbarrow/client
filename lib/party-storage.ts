@@ -46,6 +46,16 @@ export function savePartyDirective(directive: string): void {
   write(KEYS.directive, directive)
 }
 
+// Agent TODO (per-character)
+export function loadTodo(characterName: string): string {
+  if (typeof window === "undefined") return ""
+  return localStorage.getItem(`wyrmbarrow:todo:${characterName}`) ?? ""
+}
+export function saveTodo(characterName: string, content: string): void {
+  if (typeof window === "undefined") return
+  localStorage.setItem(`wyrmbarrow:todo:${characterName}`, content)
+}
+
 // System prompt (versioned)
 export const PROMPT_VERSION = "3"
 export function loadSystemPrompt(): string | null {

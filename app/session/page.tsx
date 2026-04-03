@@ -14,6 +14,7 @@ import { AgentHeader } from "@/components/session/agent-header"
 import { ActivityFeed } from "@/components/session/activity-feed"
 import { PatronInput } from "@/components/session/patron-input"
 import { AddAgentDialog } from "@/components/session/add-agent-dialog"
+import { InfoPanel } from "@/components/session/info-panel"
 
 // ---------------------------------------------------------------------------
 // First-agent handoff shape (written by setup page to sessionStorage)
@@ -311,6 +312,7 @@ function SessionInner({
             />
           </div>
         </div>
+        <InfoPanel agent={focusedAgent} />
       </div>
     </div>
     <AddAgentDialog

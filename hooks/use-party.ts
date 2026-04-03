@@ -5,7 +5,7 @@ import type {
   AgentState, AgentCredentials, LlmConfig, FeedEntry, CharacterState, RoomState,
 } from "@/lib/types"
 import { buildSystemPrompt } from "@/lib/system-prompt"
-import { loadPartyDirective, savePartyDirective, loadSystemPrompt } from "@/lib/party-storage"
+import { loadPartyDirective, savePartyDirective, loadSystemPrompt, loadTodo, saveTodo } from "@/lib/party-storage"
 
 interface UsePartyOptions {
   llmConfig: LlmConfig
@@ -64,6 +64,12 @@ export function useParty({ llmConfig }: UsePartyOptions) {
       })
     } else if (event.type === "room") {
       updateAgent(agentId, { roomState: event.room, lastLookPoll: Date.now() })
+    } else if (event.type === "todo_update") {
+      const agent = agentsRef.current.get(agentId)
+      if (agent) {
+        updateAgent(agentId, { todo: event.content })
+        saveTodo(agent.characterName, event.content)
+      }
     }
   }, [addEntry, updateAgent])
 
@@ -89,6 +95,7 @@ export function useParty({ llmConfig }: UsePartyOptions) {
       directive: credentials.directive ?? "",
       llmOverride: credentials.llmOverride ?? null,
       bootstrap,
+      todo: loadTodo(characterName),
       lastCharPoll: 0,
       lastLookPoll: 0,
     }
@@ -187,6 +194,7 @@ export function useParty({ llmConfig }: UsePartyOptions) {
           charState: agent.charState,
           roomState: agent.roomState,
         },
+        todo: agent.todo || "",
       },
       {
         onEvent: (entry) => processEvent(agentId, entry),
@@ -396,6 +404,7 @@ interface StreamStartOptions {
   isFollower?: boolean
   bootstrap?: unknown
   resumeContext?: { charState: CharacterState | null; roomState: RoomState | null }
+  todo?: string
 }
 
 interface StreamCallbacks {
@@ -431,6 +440,7 @@ function createStreamManager() {
             isFollower: options.isFollower ?? false,
             bootstrap: options.bootstrap,
             resumeContext: options.resumeContext,
+            todo: options.todo,
           }),
           signal: controller.signal,
         })

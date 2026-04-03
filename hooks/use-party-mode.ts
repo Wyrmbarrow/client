@@ -35,7 +35,7 @@ async function callAction(sessionId: string, tool: string, params: object = {}):
 export function usePartyMode(
   agents: Map<string, AgentState>,
   focusedAgentId: string | null,
-  startAgent: (agentId: string, opts?: { nudge?: string; isFollower?: boolean }) => void,
+  startAgent: (agentId: string, opts?: { nudge?: string; partyMembers?: { name: string; sessionId: string; agentId: string }[] }) => void,
 ): {
   partyMode: PartyModeState
   togglePartyMode: () => void
@@ -163,10 +163,21 @@ export function usePartyMode(
 
       setPartyMode({ status: "active", leaderId, followerIds })
 
-      // Start all followers with isFollower: true
+      // Build partyMembers array for the leader's LLM loop
+      const partyMembers: { name: string; sessionId: string; agentId: string }[] = []
       for (const followerId of followerIds) {
-        startAgent(followerId, { isFollower: true })
+        const follower = agentsRef.current.get(followerId)
+        if (follower) {
+          partyMembers.push({
+            name: follower.characterName,
+            sessionId: follower.sessionId,
+            agentId: follower.agentId,
+          })
+        }
       }
+
+      // Restart leader with party member context — leader controls all members
+      startAgent(leaderId, { partyMembers })
     } catch (err) {
       setPartyModeError((err as Error).message)
       setPartyMode({ status: "off", leaderId: null, followerIds: new Set() })
@@ -178,8 +189,8 @@ export function usePartyMode(
   // ---------------------------------------------------------------------------
 
   const deactivate = useCallback(async () => {
-    // Snapshot current follower ids before transitioning
     const snapshotFollowerIds = new Set(partyMode.followerIds)
+    const snapshotLeaderId = partyMode.leaderId
 
     setPartyMode((prev) => ({ ...prev, status: "leaving" }))
 
@@ -198,11 +209,16 @@ export function usePartyMode(
 
     setPartyMode({ status: "off", leaderId: null, followerIds: new Set() })
 
-    // Restart followers without isFollower flag
+    // Restart followers as independent agents
     for (const followerId of snapshotFollowerIds) {
-      startAgent(followerId, { isFollower: false })
+      startAgent(followerId)
     }
-  }, [partyMode.followerIds, startAgent])
+
+    // Restart leader without party context
+    if (snapshotLeaderId) {
+      startAgent(snapshotLeaderId)
+    }
+  }, [partyMode.followerIds, partyMode.leaderId, startAgent])
 
   // ---------------------------------------------------------------------------
   // togglePartyMode

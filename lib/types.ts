@@ -14,6 +14,7 @@ export type AgentEvent =
   | { type: "resources";   resources: PulseResources }
   | { type: "room";        room: RoomState }
   | { type: "command";     toolName: string; action: string; result: unknown }
+  | { type: "follower_tool_result"; agentId: string; tool: string; result: unknown; input?: Record<string, unknown> }
   | { type: "todo_update"; content: string }
   | { type: "done";        reason: string }
   | { type: "error";       message: string }
@@ -130,4 +131,13 @@ export interface AgentState {
   bootstrap: unknown
   /** Persistent TODO list — survives 50-step restarts and page reloads */
   todo: string
+}
+
+/** Follower info passed to the agent route for Party Mode */
+export interface PartyMember {
+  name: string
+  sessionId: string
+  agentId: string
+  charState: CharacterState | null
+  roomState: RoomState | null
 }

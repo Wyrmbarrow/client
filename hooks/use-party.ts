@@ -139,7 +139,7 @@ export function useParty({ llmConfig }: UsePartyOptions) {
     })
   }, [])
 
-  const startAgent = useCallback((agentId: string, opts?: { nudge?: string; isFollower?: boolean; partyMembers?: { name: string; sessionId: string; agentId: string }[] }) => {
+  const startAgent = useCallback((agentId: string, opts?: { nudge?: string; partyMembers?: { name: string; sessionId: string; agentId: string }[] }) => {
     const agent = agentsRef.current.get(agentId)
     if (!agent) return
 
@@ -169,7 +169,6 @@ export function useParty({ llmConfig }: UsePartyOptions) {
       characterBrief: customPrompt ?? undefined,
     })
 
-    const isFollower = opts?.isFollower ?? false
     const partyMembers = opts?.partyMembers
 
     let partyMembersWithState: PartyMember[] | undefined
@@ -212,7 +211,6 @@ export function useParty({ llmConfig }: UsePartyOptions) {
         systemPrompt: fullSystemPrompt,
         characterName: agent.characterName,
         nudge: opts?.nudge,
-        isFollower,
         bootstrap: agent.bootstrap,
         resumeContext: agent.bootstrap ? undefined : {
           charState: agent.charState,
@@ -238,7 +236,7 @@ export function useParty({ llmConfig }: UsePartyOptions) {
 
           const timer = setTimeout(() => {
             restartTimersRef.current.delete(agentId)
-            startAgent(agentId, { isFollower, partyMembers })
+            startAgent(agentId, { partyMembers })
           }, delay)
           restartTimersRef.current.set(agentId, timer)
         },
@@ -426,7 +424,6 @@ interface StreamStartOptions {
   systemPrompt: string
   characterName: string
   nudge?: string
-  isFollower?: boolean
   bootstrap?: unknown
   resumeContext?: { charState: CharacterState | null; roomState: RoomState | null }
   todo?: string
@@ -463,7 +460,6 @@ function createStreamManager() {
             systemPrompt: options.systemPrompt,
             characterName: options.characterName,
             nudge: options.nudge,
-            isFollower: options.isFollower ?? false,
             bootstrap: options.bootstrap,
             resumeContext: options.resumeContext,
             todo: options.todo,

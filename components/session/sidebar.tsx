@@ -54,16 +54,17 @@ export function Sidebar({
           />
         ))}
 
-        {/* Add Agent button */}
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onAddAgent}
-          disabled={agentList.length >= MAX_AGENTS}
-          className="w-full font-mono text-[9px] tracking-[0.2em] uppercase border-dashed border-[color:var(--wyr-border)] text-muted-foreground hover:text-[color:var(--wyr-accent)] hover:border-[color:var(--wyr-accent)]/40"
-        >
-          + Add Agent
-        </Button>
+        {/* Add Agent button — hidden at max capacity */}
+        {agentList.length < MAX_AGENTS && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onAddAgent}
+            className="w-full font-mono text-[9px] tracking-[0.2em] uppercase border-dashed border-[color:var(--wyr-border)] text-muted-foreground hover:text-[color:var(--wyr-accent)] hover:border-[color:var(--wyr-accent)]/40"
+          >
+            + Add Agent
+          </Button>
+        )}
       </div>
 
       {/* Room panel — pinned to bottom */}

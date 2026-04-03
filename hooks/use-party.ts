@@ -2,9 +2,9 @@
 
 import { useState, useCallback, useRef, useLayoutEffect } from "react"
 import type {
-  AgentState, AgentCredentials, LlmConfig, FeedEntry, CharacterState, RoomState,
+  AgentState, AgentCredentials, LlmConfig, FeedEntry, CharacterState, RoomState, PartyMember,
 } from "@/lib/types"
-import { buildSystemPrompt } from "@/lib/system-prompt"
+import { buildSystemPrompt, buildPartyMembersPrompt } from "@/lib/system-prompt"
 import { loadPartyDirective, savePartyDirective, loadSystemPrompt, loadTodo, saveTodo } from "@/lib/party-storage"
 
 interface UsePartyOptions {
@@ -70,6 +70,12 @@ export function useParty({ llmConfig }: UsePartyOptions) {
         updateAgent(agentId, { todo: event.content })
         saveTodo(agent.characterName, event.content)
       }
+    } else if (event.type === "follower_tool_result") {
+      addEntry(event.agentId, {
+        id: crypto.randomUUID(),
+        timestamp: Date.now(),
+        event: { type: "tool_result", tool: event.tool, result: event.result, input: event.input },
+      })
     }
   }, [addEntry, updateAgent])
 
@@ -133,7 +139,7 @@ export function useParty({ llmConfig }: UsePartyOptions) {
     })
   }, [])
 
-  const startAgent = useCallback((agentId: string, opts?: { nudge?: string; isFollower?: boolean }) => {
+  const startAgent = useCallback((agentId: string, opts?: { nudge?: string; isFollower?: boolean; partyMembers?: { name: string; sessionId: string; agentId: string }[] }) => {
     const agent = agentsRef.current.get(agentId)
     if (!agent) return
 
@@ -164,6 +170,24 @@ export function useParty({ llmConfig }: UsePartyOptions) {
     })
 
     const isFollower = opts?.isFollower ?? false
+    const partyMembers = opts?.partyMembers
+
+    let partyMembersWithState: PartyMember[] | undefined
+    if (partyMembers?.length) {
+      partyMembersWithState = partyMembers.map(pm => {
+        const follower = agentsRef.current.get(pm.agentId)
+        return {
+          ...pm,
+          charState: follower?.charState ?? null,
+          roomState: follower?.roomState ?? null,
+        }
+      })
+    }
+
+    let fullSystemPrompt = systemPrompt
+    if (partyMembersWithState?.length) {
+      fullSystemPrompt += "\n\n" + buildPartyMembersPrompt(partyMembersWithState)
+    }
 
     // Cancel any pending auto-restart timer for this agent so that an explicit
     // startAgent call (e.g. from deactivate) isn't overwritten by a stale onDone timeout.
@@ -185,7 +209,7 @@ export function useParty({ llmConfig }: UsePartyOptions) {
       {
         sessionId: agent.sessionId,
         llmConfig: effectiveLlm,
-        systemPrompt,
+        systemPrompt: fullSystemPrompt,
         characterName: agent.characterName,
         nudge: opts?.nudge,
         isFollower,
@@ -195,6 +219,7 @@ export function useParty({ llmConfig }: UsePartyOptions) {
           roomState: agent.roomState,
         },
         todo: agent.todo || "",
+        partyMembers: partyMembers,
       },
       {
         onEvent: (entry) => processEvent(agentId, entry),
@@ -213,7 +238,7 @@ export function useParty({ llmConfig }: UsePartyOptions) {
 
           const timer = setTimeout(() => {
             restartTimersRef.current.delete(agentId)
-            startAgent(agentId, { isFollower })
+            startAgent(agentId, { isFollower, partyMembers })
           }, delay)
           restartTimersRef.current.set(agentId, timer)
         },
@@ -405,6 +430,7 @@ interface StreamStartOptions {
   bootstrap?: unknown
   resumeContext?: { charState: CharacterState | null; roomState: RoomState | null }
   todo?: string
+  partyMembers?: { name: string; sessionId: string; agentId: string }[]
 }
 
 interface StreamCallbacks {
@@ -441,6 +467,7 @@ function createStreamManager() {
             bootstrap: options.bootstrap,
             resumeContext: options.resumeContext,
             todo: options.todo,
+            partyMembers: options.partyMembers,
           }),
           signal: controller.signal,
         })

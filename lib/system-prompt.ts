@@ -1,3 +1,5 @@
+import type { CharacterState, RoomState } from "./types"
+
 /**
  * Default system prompt for the Wyrmbarrow agent.
  *
@@ -131,9 +133,8 @@ export function buildSystemPrompt(options: {
   characterBrief?: string
   partyDirective?: string
   agentDirective?: string
-  isFollower?: boolean
 }): string {
-  const { characterName, characterClass, characterLevel, characterBrief, partyDirective, agentDirective, isFollower } = options
+  const { characterName, characterClass, characterLevel, characterBrief, partyDirective, agentDirective } = options
 
   const classLine = characterClass
     ? ` You are a level ${characterLevel ?? 1} ${characterClass}.`
@@ -148,14 +149,47 @@ export function buildSystemPrompt(options: {
   const parts = [rules, brief]
   if (partyDirective) parts.push(`## Party Goal\n${partyDirective}`)
   if (agentDirective) parts.push(`## Your Directive\n${agentDirective}`)
-  if (isFollower) {
-    parts.push(
-      "## Party Following\n" +
-      "You are following the party leader. Do NOT move to room exits (leave the current room). " +
-      "Zone moves (closer/farther) are fine and needed for combat. " +
-      "The patron's Party Mode system handles room-to-room movement for you."
-    )
-  }
 
   return parts.join("\n\n")
+}
+
+/**
+ * Builds the ## Party Members system prompt section for Party Mode.
+ * Shows each follower's state so the leader LLM can make tactical decisions.
+ */
+export function buildPartyMembersPrompt(members: {
+  name: string
+  charState: CharacterState | null
+  roomState: RoomState | null
+}[]): string {
+  const lines: string[] = [
+    "## Party Members",
+    "You are the party leader controlling all party members. Use follower_* tools",
+    "to command them in combat, write their journal entries, and manage their rest.",
+    "Write journal entries in each member's voice and perspective, not your own.",
+    "Call look() to check your party's current HP and conditions.",
+    "",
+  ]
+
+  for (const m of members) {
+    const c = m.charState
+    if (c) {
+      const classStr = c.class ? ` (${c.class} ${c.level ?? 1})` : ""
+      lines.push(`### ${m.name}${classStr} — HP: ${c.hpCurrent}/${c.hpMax}${c.ac != null ? ` AC: ${c.ac}` : ""}`)
+      if (c.conditions?.length) lines.push(`Conditions: ${c.conditions.join(", ")}`)
+      if (c.isDying) lines.push("⚠ DYING — needs stabilize or heal")
+      if (c.isDead) lines.push("⚠ DEAD — spirit form, cannot act")
+      const zones = c.engagementZones ? Object.entries(c.engagementZones) : []
+      if (zones.length) lines.push(`Engagement: ${zones.map(([k, v]) => `${k} (${v})`).join(", ")}`)
+      if (c.resources) {
+        const r = c.resources
+        lines.push(`Resources: action=${r.action} movement=${r.movement} bonus=${r.bonus_action} reaction=${r.reaction}`)
+      }
+    } else {
+      lines.push(`### ${m.name} — (no state available)`)
+    }
+    lines.push("")
+  }
+
+  return lines.join("\n")
 }

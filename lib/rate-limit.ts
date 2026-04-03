@@ -1,17 +1,14 @@
-// In-memory rate limiter for LLM calls
+// In-memory rate limiter for LLM calls (global, not per-user)
 // Disabled by default; enable via LLM_RATE_LIMIT_ENABLED=true
+// Enforces a single rate limit across all concurrent sessions to respect provider limits
 
 const ENABLED = process.env.LLM_RATE_LIMIT_ENABLED === "true";
 const MAX_REQUESTS = Number(process.env.LLM_RATE_LIMIT_MAX_REQUESTS ?? "40");
 const WINDOW_MS = Number(process.env.LLM_RATE_LIMIT_WINDOW_MS ?? "60000"); // 1 min default
 
-interface RateLimitEntry {
-  timestamps: number[];
-}
+const globalTimestamps: number[] = [];
 
-const userLimits = new Map<string, RateLimitEntry>();
-
-export function checkLLMRateLimit(userId: string): {
+export function checkLLMRateLimit(): {
   allowed: boolean;
   remaining: number;
   resetAt: number;
@@ -21,24 +18,20 @@ export function checkLLMRateLimit(userId: string): {
   }
 
   const now = Date.now();
-  let entry = userLimits.get(userId);
-
-  if (!entry) {
-    entry = { timestamps: [] };
-    userLimits.set(userId, entry);
-  }
 
   // Remove old timestamps outside the window
-  entry.timestamps = entry.timestamps.filter((ts) => now - ts < WINDOW_MS);
-
-  const allowed = entry.timestamps.length < MAX_REQUESTS;
-  const remaining = Math.max(0, MAX_REQUESTS - entry.timestamps.length);
-
-  if (allowed) {
-    entry.timestamps.push(now);
+  while (globalTimestamps.length > 0 && now - globalTimestamps[0] >= WINDOW_MS) {
+    globalTimestamps.shift();
   }
 
-  const oldestTimestamp = entry.timestamps[0] ?? now;
+  const allowed = globalTimestamps.length < MAX_REQUESTS;
+  const remaining = Math.max(0, MAX_REQUESTS - globalTimestamps.length);
+
+  if (allowed) {
+    globalTimestamps.push(now);
+  }
+
+  const oldestTimestamp = globalTimestamps[0] ?? now;
   const resetAt = oldestTimestamp + WINDOW_MS;
 
   return { allowed, remaining, resetAt };

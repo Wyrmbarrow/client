@@ -82,8 +82,8 @@ export async function POST(req: NextRequest) {
     isFollower,
   } = await req.json()
 
-  // Pre-flight rate limit check: reject if LLM quota exhausted
-  const { allowed, resetAt } = checkLLMRateLimit(sessionId)
+  // Pre-flight rate limit check: reject if global LLM quota exhausted
+  const { allowed, resetAt } = checkLLMRateLimit()
   if (!allowed) {
     const retryAfterSeconds = Math.ceil((resetAt - Date.now()) / 1000)
     return NextResponse.json(

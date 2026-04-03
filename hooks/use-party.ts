@@ -22,6 +22,8 @@ export function useParty({ llmConfig }: UsePartyOptions) {
   const streamsRef = useRef<Map<string, ReturnType<typeof createStreamManager>>>(new Map())
   // Track pending auto-restart timers so we can cancel them if startAgent is called explicitly.
   const restartTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
+  // Track rate limit backoff times per agent (global rate limiter means we coordinate across sessions)
+  const rateLimitBackoffRef = useRef<Map<string, number>>(new Map())
 
   const updateAgent = useCallback((agentId: string, updates: Partial<AgentState>) => {
     setAgents(prev => {
@@ -128,6 +130,19 @@ export function useParty({ llmConfig }: UsePartyOptions) {
     const agent = agentsRef.current.get(agentId)
     if (!agent) return
 
+    // Check if this agent is in backoff period (global rate limit means all agents coordinate)
+    const backoffUntil = rateLimitBackoffRef.current.get(agentId) ?? 0
+    if (Date.now() < backoffUntil) {
+      // Agent is in backoff, reschedule the start for when backoff expires
+      const delay = Math.max(100, backoffUntil - Date.now())
+      const timer = setTimeout(() => {
+        rateLimitBackoffRef.current.delete(agentId)
+        startAgent(agentId, opts)
+      }, delay)
+      restartTimersRef.current.set(agentId, timer)
+      return
+    }
+
     const effectiveLlm: LlmConfig = {
       ...llmConfig,
       ...(agent.llmOverride ?? {}),
@@ -182,6 +197,12 @@ export function useParty({ llmConfig }: UsePartyOptions) {
           // The patron has an explicit Stop button to halt the agent intentionally.
           // Use longer pauses for rate limits and stop so the patron can read output.
           const delay = reason === "rate_limited" ? 30_000 : reason === "stop" ? 2000 : 500
+
+          // If rate limited, set backoff time so the agent waits 30s before retrying
+          if (reason === "rate_limited") {
+            rateLimitBackoffRef.current.set(agentId, Date.now() + 30_000)
+          }
+
           const timer = setTimeout(() => {
             restartTimersRef.current.delete(agentId)
             startAgent(agentId, { isFollower })
@@ -415,6 +436,12 @@ function createStreamManager() {
         })
 
         if (!res.ok || !res.body) {
+          // Special handling for rate limit (429)
+          if (res.status === 429) {
+            callbacks.onError("Rate limited by LLM provider")
+            callbacks.onDone("rate_limited")
+            return
+          }
           callbacks.onError(`Agent API returned ${res.status}`)
           return
         }

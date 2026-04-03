@@ -1,7 +1,6 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import type { FeedEntry, RoomState, RoomMessage } from "@/lib/types"
 import { TOOL_CATEGORY } from "@/lib/tools"
@@ -88,30 +87,28 @@ export function ActivityFeed({ entries, roomState }: ActivityFeedProps) {
   }, [inspect])
 
   return (
-    <>
-      <ScrollArea className="flex-1">
-        <div className="flex flex-col py-2 gap-1">
-          {entries.length === 0 && (
-            <div className="px-4 py-8 text-center">
-              <p className="font-mono text-[10px] text-[color:var(--wyr-muted)]">
-                Agent will begin once started...
-              </p>
-            </div>
-          )}
+    <div className="flex-1 min-h-0 overflow-y-auto">
+      <div className="flex flex-col py-2 gap-1">
+        {entries.length === 0 && (
+          <div className="px-4 py-8 text-center">
+            <p className="font-mono text-[10px] text-[color:var(--wyr-muted)]">
+              Agent will begin once started...
+            </p>
+          </div>
+        )}
 
-          {entries.map((entry) => (
-            <FeedRow
-              key={entry.id}
-              entry={entry}
-              roomState={roomState}
-              isRepeatLook={repeatLooks.has(entry.id)}
-              onInspect={onInspect}
-            />
-          ))}
+        {entries.map((entry) => (
+          <FeedRow
+            key={entry.id}
+            entry={entry}
+            roomState={roomState}
+            isRepeatLook={repeatLooks.has(entry.id)}
+            onInspect={onInspect}
+          />
+        ))}
 
-          <div ref={bottomRef} />
-        </div>
-      </ScrollArea>
+        <div ref={bottomRef} />
+      </div>
 
       <Dialog open={inspect !== null} onOpenChange={(open) => { if (!open) setInspect(null) }}>
         <DialogContent className="bg-[var(--wyr-panel)] border-[color:var(--wyr-border)] sm:max-w-lg max-h-[80vh] overflow-hidden flex flex-col">
@@ -133,7 +130,7 @@ export function ActivityFeed({ entries, roomState }: ActivityFeedProps) {
           </div>
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   )
 }
 

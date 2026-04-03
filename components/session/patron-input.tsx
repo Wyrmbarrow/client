@@ -155,7 +155,7 @@ export function PatronInput({
   }
 
   return (
-    <div className="border-t border-[color:var(--wyr-border)] bg-[var(--wyr-surface)] px-4 py-3 space-y-3">
+    <div className="bg-[var(--wyr-surface)] px-4 py-3 space-y-3">
       <Tabs defaultValue="directive">
         <div className="flex items-center justify-between gap-3">
           <TabsList className="h-7">
@@ -205,7 +205,7 @@ export function PatronInput({
         </div>
 
         <TabsContent value="directive">
-          <div className="space-y-1 pt-2">
+          <div className="space-y-2 pt-2">
             <label className="font-mono text-[8px] tracking-widest uppercase text-muted-foreground">
               {agentName} directive
             </label>
@@ -216,13 +216,13 @@ export function PatronInput({
               placeholder="Explore Oakhaven. Write a journal entry before resting."
               rows={2}
               disabled={isRunning}
-              className="w-full font-mono text-xs px-3 py-2 resize-none rounded-md bg-background border border-border text-foreground outline-none disabled:opacity-50"
+              className="w-full font-mono text-xs px-3 py-2 resize-none rounded-md bg-[#2a1f14] border border-[color:var(--wyr-border)] text-[#e8e0d0] outline-none placeholder:text-[rgba(160,135,88,0.5)]"
             />
           </div>
         </TabsContent>
 
         <TabsContent value="nudge">
-          <div className="space-y-1 pt-2">
+          <div className="space-y-2 pt-2">
             <label className="font-mono text-[8px] tracking-widest uppercase text-muted-foreground">
               One-time whisper to {agentName}
             </label>
@@ -231,7 +231,7 @@ export function PatronInput({
               onChange={(e) => setNudgeText(e.target.value)}
               onKeyDown={handleNudgeKeyDown}
               placeholder="Focus on speaking to Warden Thorne."
-              className="font-mono text-xs"
+              className="font-mono text-xs px-3 py-2 rounded-md bg-[#2a1f14] border border-[color:var(--wyr-border)] text-[#e8e0d0] outline-none placeholder:text-[rgba(160,135,88,0.5)]"
               suppressHydrationWarning
             />
           </div>
@@ -248,7 +248,7 @@ export function PatronInput({
               <select
                 value={selectedTool}
                 onChange={(e) => handleToolChange(e.target.value)}
-                className="flex-1 font-mono text-xs px-3 py-2 rounded-md bg-background border border-border text-foreground outline-none"
+                className="flex-1 font-mono text-xs px-3 py-2 rounded-md bg-[#2a1f14] border border-[color:var(--wyr-border)] text-[#e8e0d0] outline-none [&>option]:bg-[#2a1f14] [&>option]:text-[#e8e0d0]"
               >
                 <option value="">Select command...</option>
                 {availableCommands.map((tool) => (
@@ -266,7 +266,7 @@ export function PatronInput({
                   <select
                     value={selectedAction}
                     onChange={(e) => handleActionChange(e.target.value)}
-                    className="flex-1 font-mono text-xs px-3 py-2 rounded-md bg-background border border-border text-foreground outline-none"
+                    className="flex-1 font-mono text-xs px-3 py-2 rounded-md bg-[#2a1f14] border border-[color:var(--wyr-border)] text-[#e8e0d0] outline-none [&>option]:bg-[#2a1f14] [&>option]:text-[#e8e0d0]"
                   >
                     <option value="">Select action...</option>
                     {actions.map((action) => (
@@ -281,15 +281,16 @@ export function PatronInput({
 
             {/* Parameters */}
             {selectedAction && Object.keys(commandParams).length > 0 && (
-              <div className="space-y-1">
+              <div className="space-y-2">
                 {Object.entries(commandParams).map(([key, value]) => {
                   const options = getParamOptions(key)
+                  const inputClass = "w-full font-mono text-xs px-3 py-2 rounded-md bg-[#2a1f14] border border-[color:var(--wyr-border)] text-[#e8e0d0] outline-none placeholder:text-[rgba(160,135,88,0.5)]"
                   return options ? (
                     <select
                       key={key}
                       value={value}
                       onChange={(e) => handleParamChange(key, e.target.value)}
-                      className="w-full font-mono text-xs px-3 py-1 rounded-md bg-background border border-border text-foreground outline-none"
+                      className={`${inputClass} [&>option]:bg-[#2a1f14] [&>option]:text-[#e8e0d0]`}
                     >
                       <option value="">Select {key}...</option>
                       {options.map((opt) => (
@@ -305,7 +306,7 @@ export function PatronInput({
                       value={value}
                       onChange={(e) => handleParamChange(key, e.target.value)}
                       placeholder={key}
-                      className="w-full font-mono text-xs px-3 py-1 rounded-md bg-background border border-border text-foreground outline-none"
+                      className={inputClass}
                     />
                   )
                 })}

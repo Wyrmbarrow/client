@@ -280,34 +280,36 @@ function SessionInner({
           onRemoveAgent={handleRemoveAgent}
           partyMode={partyMode}
         />
-        <div className="flex flex-col flex-1 overflow-hidden">
+        <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
           <AgentHeader agent={focusedAgent} />
           <ActivityFeed
             entries={focusedAgent?.entries ?? []}
             roomState={focusedAgent?.roomState ?? null}
           />
-          <PatronInput
-            key={focusedAgent?.agentId ?? "none"}
-            agent={focusedAgent}
-            roomState={focusedAgent?.roomState ?? null}
-            onStart={() => {
-              if (party.focusedAgentId) party.startAgent(party.focusedAgentId)
-            }}
-            onStop={() => {
-              if (party.focusedAgentId) party.stopAgent(party.focusedAgentId)
-            }}
-            onDirectiveChange={(text) => {
-              if (party.focusedAgentId) party.setDirective(party.focusedAgentId, text)
-            }}
-            onNudge={(text) => {
-              if (party.focusedAgentId) party.nudge(party.focusedAgentId, text)
-            }}
-            onCommand={(toolName, action, params) => {
-              if (party.focusedAgentId) {
-                party.executeCommand(party.focusedAgentId, toolName, action, params)
-              }
-            }}
-          />
+          <div className="shrink-0 border-t border-[color:var(--wyr-border)]">
+            <PatronInput
+              key={focusedAgent?.agentId ?? "none"}
+              agent={focusedAgent}
+              roomState={focusedAgent?.roomState ?? null}
+              onStart={() => {
+                if (party.focusedAgentId) party.startAgent(party.focusedAgentId)
+              }}
+              onStop={() => {
+                if (party.focusedAgentId) party.stopAgent(party.focusedAgentId)
+              }}
+              onDirectiveChange={(text) => {
+                if (party.focusedAgentId) party.setDirective(party.focusedAgentId, text)
+              }}
+              onNudge={(text) => {
+                if (party.focusedAgentId) party.nudge(party.focusedAgentId, text)
+              }}
+              onCommand={(toolName, action, params) => {
+                if (party.focusedAgentId) {
+                  party.executeCommand(party.focusedAgentId, toolName, action, params)
+                }
+              }}
+            />
+          </div>
         </div>
       </div>
     </div>

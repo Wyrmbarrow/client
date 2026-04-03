@@ -79,8 +79,8 @@ export async function POST(req: NextRequest) {
     bootstrap,
     resumeContext,
     noToolChoice,
-    isFollower,
     todo,
+    partyMembers,
   } = await req.json()
 
   // Pre-flight rate limit check: reject if global LLM quota exhausted
@@ -118,24 +118,6 @@ export async function POST(req: NextRequest) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const tools: Record<string, any> = { ...sharedTools }
 
-        // Suppress room-exit moves for follower agents — zone moves (closer/farther) are still allowed
-        if (isFollower && "move" in tools) {
-          const originalMove = tools["move"]
-          tools["move"] = {
-            ...originalMove,
-            execute: async (params: unknown, ctx: unknown) => {
-              const dir = (params as Record<string, unknown>)?.direction
-              if (dir !== "closer" && dir !== "farther") {
-                return {
-                  success: false,
-                  message: "Movement suppressed: party follower cannot leave this room while following the leader.",
-                }
-              }
-              return (originalMove as { execute: (p: unknown, c: unknown) => unknown }).execute(params, ctx)
-            },
-          } as typeof originalMove
-        }
-
         // ── Local tools (execute in-process, no MCP round-trip) ──────────
         let todoContent = todo || ""
 
@@ -162,6 +144,143 @@ export async function POST(req: NextRequest) {
             send({ type: "todo_update", content: params.content })
             return { status: "ok", message: "TODO list updated." }
           },
+        }
+
+        // ── Party Mode follower tools ───────────────────────────────────
+        const partyMemberMap = new Map<string, { sessionId: string; agentId: string }>(
+          (partyMembers ?? []).map((pm: { name: string; sessionId: string; agentId: string }) => [
+            pm.name.toLowerCase(),
+            { sessionId: pm.sessionId, agentId: pm.agentId },
+          ]),
+        )
+
+        async function callFollowerTool(
+          member: string,
+          mcpToolName: string,
+          params: Record<string, unknown>,
+        ): Promise<{ result: unknown; agentId: string }> {
+          const entry = partyMemberMap.get(member.toLowerCase())
+          if (!entry) {
+            return {
+              result: { error: `Unknown party member: ${member}` },
+              agentId: "",
+            }
+          }
+          const mcpTool = sharedTools[mcpToolName]
+          if (!mcpTool) {
+            return {
+              result: { error: `MCP tool not found: ${mcpToolName}` },
+              agentId: entry.agentId,
+            }
+          }
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const result = await (mcpTool as any).execute(
+            { session_id: entry.sessionId, ...params },
+            { toolCallId: `follower-${member}`, messages: [] },
+          )
+          send({
+            type: "follower_tool_result",
+            agentId: entry.agentId,
+            tool: mcpToolName,
+            result: parseMcpResult(result),
+            input: params,
+          } as AgentEvent)
+          return { result, agentId: entry.agentId }
+        }
+
+        if (partyMemberMap.size > 0) {
+          const memberNames = [...partyMemberMap.keys()].join(", ")
+
+          tools["follower_combat"] = {
+            description: `Issue a combat action for a party follower. Members: ${memberNames}. Actions: attack, cast_spell, dodge, dash, help, hide, disengage.`,
+            inputSchema: jsonSchema({
+              type: "object",
+              properties: {
+                member:    { type: "string", description: "Party member name (lowercase)" },
+                action:    { type: "string", description: "Combat action to take" },
+                target_ref: { type: "string", description: "Target reference (optional)" },
+                weapon_id:  { type: "string", description: "Weapon ID for attack actions (optional)" },
+                spell_id:   { type: "string", description: "Spell ID for cast_spell (optional)" },
+                slot_level: { type: "number", description: "Spell slot level (optional)" },
+              },
+              required: ["member", "action"],
+            }),
+            execute: async (params: { member: string; action: string; target_ref?: string; weapon_id?: string; spell_id?: string; slot_level?: number }) => {
+              const { member, ...rest } = params
+              const { result } = await callFollowerTool(member, "combat", rest as Record<string, unknown>)
+              return parseMcpResult(result)
+            },
+          }
+
+          tools["follower_move_zone"] = {
+            description: `Move a party follower within engagement zones. Members: ${memberNames}. Direction must be "closer" or "farther".`,
+            inputSchema: jsonSchema({
+              type: "object",
+              properties: {
+                member:    { type: "string", description: "Party member name (lowercase)" },
+                direction: { type: "string", enum: ["closer", "farther"], description: "Zone movement direction" },
+              },
+              required: ["member", "direction"],
+            }),
+            execute: async (params: { member: string; direction: string }) => {
+              const { member, ...rest } = params
+              const { result } = await callFollowerTool(member, "move", rest as Record<string, unknown>)
+              return parseMcpResult(result)
+            },
+          }
+
+          tools["follower_journal"] = {
+            description: `Write a journal entry for a party follower. Members: ${memberNames}.`,
+            inputSchema: jsonSchema({
+              type: "object",
+              properties: {
+                member:     { type: "string", description: "Party member name (lowercase)" },
+                action:     { type: "string", description: "Journal action (e.g. write, read)" },
+                content:    { type: "string", description: "Journal entry content (optional)" },
+                entry_type: { type: "string", description: "Entry type e.g. status_update, long_rest (optional)" },
+              },
+              required: ["member", "action"],
+            }),
+            execute: async (params: { member: string; action: string; content?: string; entry_type?: string }) => {
+              const { member, ...rest } = params
+              const { result } = await callFollowerTool(member, "journal", rest as Record<string, unknown>)
+              return parseMcpResult(result)
+            },
+          }
+
+          tools["follower_rest"] = {
+            description: `Initiate a rest for a party follower. Members: ${memberNames}.`,
+            inputSchema: jsonSchema({
+              type: "object",
+              properties: {
+                member: { type: "string", description: "Party member name (lowercase)" },
+                action: { type: "string", description: "Rest action: short_rest or long_rest" },
+              },
+              required: ["member", "action"],
+            }),
+            execute: async (params: { member: string; action: string }) => {
+              const { member, ...rest } = params
+              const { result } = await callFollowerTool(member, "rest", rest as Record<string, unknown>)
+              return parseMcpResult(result)
+            },
+          }
+
+          tools["follower_character"] = {
+            description: `Inspect the character sheet for a party follower. Members: ${memberNames}.`,
+            inputSchema: jsonSchema({
+              type: "object",
+              properties: {
+                member: { type: "string", description: "Party member name (lowercase)" },
+                action: { type: "string", description: "Character action (optional)" },
+              },
+              required: ["member"],
+            }),
+            execute: async (params: { member: string; action?: string }) => {
+              const { member, ...rest } = params
+              const { result } = await callFollowerTool(member, "character", rest as Record<string, unknown>)
+              return parseMcpResult(result)
+            },
+          }
         }
 
         // LLM provider — any OpenAI-compat endpoint.

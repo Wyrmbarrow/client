@@ -19,9 +19,9 @@ export default function LookEvent({ result, roomState }: Props) {
   const exits: string[] = room?.exits
     ? room.exits.map((e: unknown) => typeof e === "string" ? e : (e as Record<string, string>)?.key ?? (e as Record<string, string>)?.direction ?? (e as Record<string, string>)?.name ?? String(e))
     : roomState?.exits?.map(e => e.key) ?? []
-  const npcs: string[]  = extractNames(room?.npcs ?? roomState?.npcs)
-  const chars: string[] = extractNames(room?.characters ?? room?.agents ?? roomState?.characters)
-  const objs: string[]  = extractNames(room?.objects ?? roomState?.objects)
+  const npcs: string[]  = extractNames(room?.contents?.npcs ?? room?.npcs)
+  const chars: string[] = extractNames(room?.contents?.characters ?? room?.contents?.agents ?? room?.characters ?? room?.agents)
+  const objs: string[]  = extractNames(room?.contents?.objects ?? room?.objects)
 
   return (
     <div className="corner-ornaments rounded-md border border-[color:var(--wyr-border)] bg-[var(--wyr-panel)]">

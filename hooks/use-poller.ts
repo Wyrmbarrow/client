@@ -27,23 +27,20 @@ export function usePoller(config: PollerConfig) {
   const { partyModeStatus, leaderId } = config
 
   useEffect(() => {
+    // Character stat poll — rotates through the stalest agent across all
+    // agents (party mode: all members; solo: all agents).  Skips agents in
+    // a sanctuary without active combat since their stats don't change there.
+    // Polls regardless of running/stopped status.
     const charTimer = setInterval(() => {
       if (Date.now() < backoffUntil.current) return
 
-      const { agents, onCharState, onPollTime, partyModeStatus, leaderId } = configRef.current
-      // Pause all polling during party state transitions to reduce MCP load
-      // while activation/deactivation calls are in-flight.
+      const { agents, onCharState, onPollTime, partyModeStatus } = configRef.current
       if (partyModeStatus === "forming" || partyModeStatus === "leaving") return
-      const partyActive = partyModeStatus === "active"
 
       let stalestId: string | null = null
       let stalestTime = Infinity
 
       for (const [id, agent] of agents) {
-        if (agent.status === "stopped") continue
-        // When party is active: skip charstat for all agents except the leader.
-        // If leaderId is null (shouldn't happen in practice), skip all to be safe.
-        if (partyActive && id !== leaderId) continue
         const inSanctuary = agent.roomState?.isSanctuary ?? false
         const inCombat = agent.charState?.engagementZones
           && Object.keys(agent.charState.engagementZones).length > 0
@@ -75,6 +72,9 @@ export function usePoller(config: PollerConfig) {
         .catch(() => {})
     }, CHAR_POLL_INTERVAL)
 
+    // Look poll — in party mode, rotates through all party members (stalest
+    // lastLookPoll first) so each member's room state stays fresh.  Outside
+    // party mode, always polls the focused agent.  Polls regardless of status.
     const lookInterval = partyModeStatus === "active" ? 3000 : LOOK_POLL_INTERVAL
 
     const lookTimer = setInterval(() => {
@@ -84,12 +84,24 @@ export function usePoller(config: PollerConfig) {
       if (partyModeStatus === "forming" || partyModeStatus === "leaving") return
       const isPartyActive = partyModeStatus === "active"
 
-      // In party mode, always poll the leader; otherwise poll the focused agent
-      const targetId = isPartyActive && leaderId ? leaderId : focusedAgentId
+      let targetId: string | null = null
+
+      if (isPartyActive && leaderId) {
+        // Pick the party member with the oldest look poll
+        let stalestLook = Infinity
+        for (const [id, agent] of agents) {
+          if (agent.lastLookPoll < stalestLook) {
+            stalestLook = agent.lastLookPoll
+            targetId = id
+          }
+        }
+      } else {
+        targetId = focusedAgentId
+      }
+
       if (!targetId) return
       const agent = agents.get(targetId)
       if (!agent) return
-      if (agent.status === "stopped") return
 
       fetch("/api/agent/poll", {
         method: "POST",

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import type { FeedEntry, RoomState, RoomMessage } from "@/lib/types"
+import { buildRoomMessage } from "@/lib/parse-state"
 import { TOOL_CATEGORY } from "@/lib/tools"
 import ThinkingEvent from "@/components/feed/thinking-event"
 import LookEvent from "@/components/feed/look-event"
@@ -300,6 +301,16 @@ function FeedRow({
     )
   }
 
+  if (event.type === "notification") {
+    return (
+      <>
+        {event.messages.map((msg, i) => (
+          <RoomMessageRow key={i} message={msg} />
+        ))}
+      </>
+    )
+  }
+
   if (event.type !== "tool_result") return null
 
   const { tool, result } = event
@@ -312,7 +323,9 @@ function FeedRow({
     const r = result as Record<string, unknown>
     const room = (r?.room ?? r) as Record<string, unknown>
     const desc = String(room?.description ?? room?.desc ?? "")
-    const repeatMessages: RoomMessage[] = Array.isArray(r?.messages) ? r.messages as RoomMessage[] : []
+    const repeatMessages: RoomMessage[] = Array.isArray(r?.messages)
+      ? (r.messages as Record<string, unknown>[]).map(buildRoomMessage)
+      : []
     return (
       <>
         <div
@@ -347,8 +360,9 @@ function FeedRow({
   switch (tool) {
     case "look":
     case "explore": {
-      const lookMessages: RoomMessage[] = Array.isArray((result as Record<string, unknown>)?.messages)
-        ? (result as Record<string, unknown>).messages as RoomMessage[]
+      const rawMsgs = (result as Record<string, unknown>)?.messages
+      const lookMessages: RoomMessage[] = Array.isArray(rawMsgs)
+        ? (rawMsgs as Record<string, unknown>[]).map(buildRoomMessage)
         : []
       return (
         <>

@@ -16,6 +16,7 @@ export type AgentEvent =
   | { type: "command";     toolName: string; action: string; result: unknown }
   | { type: "follower_tool_result"; agentId: string; tool: string; result: unknown; input?: Record<string, unknown> }
   | { type: "todo_update"; content: string }
+  | { type: "notification"; messages: RoomMessage[] }
   | { type: "done";        reason: string }
   | { type: "error";       message: string }
 

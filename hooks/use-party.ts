@@ -19,6 +19,11 @@ export function useParty({ llmConfig }: UsePartyOptions) {
   const agentsRef = useRef(agents)
   useLayoutEffect(() => { agentsRef.current = agents })
 
+  // Tracks which notification keys have already been injected into the feed,
+  // keyed by agentId → Set<"type:from:timestamp">.  Prevents duplicates when
+  // a poll and an agent look happen close together.
+  const seenNotificationsRef = useRef<Map<string, Set<string>>>(new Map())
+
   const streamsRef = useRef<Map<string, ReturnType<typeof createStreamManager>>>(new Map())
   // Track pending auto-restart timers so we can cancel them if startAgent is called explicitly.
   const restartTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
@@ -263,6 +268,36 @@ export function useParty({ llmConfig }: UsePartyOptions) {
     updateAgent(agentId, { status: "stopped" })
   }, [updateAgent])
 
+  // Shared helper: update roomState and inject notification entries for any new
+  // messages in the state (used by both the background poller and processEvent).
+  const setRoomState = useCallback((agentId: string, state: RoomState) => {
+    updateAgent(agentId, { roomState: state })
+
+    const messages = state.messages ?? []
+    if (messages.length === 0) return
+
+    let seen = seenNotificationsRef.current.get(agentId)
+    if (!seen) {
+      seen = new Set()
+      seenNotificationsRef.current.set(agentId, seen)
+    }
+
+    const fresh = messages.filter(m => {
+      const key = `${m.type}:${m.from}:${m.timestamp}`
+      if (seen!.has(key)) return false
+      seen!.add(key)
+      return true
+    })
+
+    if (fresh.length > 0) {
+      addEntry(agentId, {
+        id: crypto.randomUUID(),
+        timestamp: Date.now(),
+        event: { type: "notification", messages: fresh },
+      })
+    }
+  }, [updateAgent, addEntry])
+
   const setDirective = useCallback((agentId: string, text: string) => {
     updateAgent(agentId, { directive: text })
   }, [updateAgent])
@@ -355,7 +390,7 @@ export function useParty({ llmConfig }: UsePartyOptions) {
     nudge,
     executeCommand,
     setCharState: (agentId: string, state: CharacterState) => updateAgent(agentId, { charState: state }),
-    setRoomState: (agentId: string, state: RoomState) => updateAgent(agentId, { roomState: state }),
+    setRoomState,
     setPollTime: (agentId: string, tool: "character" | "look") => {
       const key = tool === "character" ? "lastCharPoll" : "lastLookPoll"
       updateAgent(agentId, { [key]: Date.now() })

@@ -5,6 +5,62 @@
 
 import type { CharacterState, RoomState, ExitInfo, PulseResources, RoomMessage } from "./types"
 
+// ---------------------------------------------------------------------------
+// Room message formatter
+// ---------------------------------------------------------------------------
+
+/**
+ * Normalises a raw server notification object into a RoomMessage with a
+ * display-ready `text` field.
+ *
+ * Server message shapes:
+ *   say / whisper                → { type, from, message, timestamp }
+ *   overheard_say                → { type, from, to, message, timestamp }
+ *   overheard_whisper            → { type, from, to, text, timestamp }  (pre-formatted)
+ *   sending_stone                → { type, from, message, timestamp }
+ *   character_arrival            → { type: "character_arrival", character, from_direction?, timestamp }
+ *   character_departure          → { type: "character_departure", character, direction?, timestamp }
+ *   minstrel_arrival/departure,
+ *   performance                  → { type, from, text, timestamp }  (pre-formatted)
+ */
+export function buildRoomMessage(m: AnyObj): RoomMessage {
+  const type = String(m.type ?? "")
+  const from = String(m.from ?? m.character ?? "")
+  const raw = String(m.message ?? m.text ?? "")
+  const to = String(m.to ?? "")
+  const fromDir = String(m.from_direction ?? "")
+  const direction = String(m.direction ?? "")
+
+  let text: string
+  switch (type) {
+    case "say":
+      text = `${from} says, "${raw}"`
+      break
+    case "whisper":
+      text = `${from} whispers, "${raw}"`
+      break
+    case "overheard_say":
+      text = to ? `${from} says to ${to}, "${raw}"` : `${from} says, "${raw}"`
+      break
+    case "overheard_whisper":
+      text = raw || `${from} whispers something to ${to}.`
+      break
+    case "sending_stone":
+      text = `[Stone] ${from}: "${raw}"`
+      break
+    case "character_arrival":
+      text = fromDir ? `${from} arrives from the ${fromDir}.` : `${from} arrives.`
+      break
+    case "character_departure":
+      text = direction ? `${from} departs to the ${direction}.` : `${from} departs.`
+      break
+    default:
+      text = raw
+  }
+
+  return { type, from, text, timestamp: String(m.timestamp ?? "") }
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyObj = Record<string, any>
 
@@ -102,12 +158,7 @@ export function parseRoomState(toolName: string, result: unknown): RoomState | n
   if (Array.isArray(r.messages)) {
     for (const m of r.messages) {
       if (m && typeof m === "object") {
-        messages.push({
-          type:      m.type ?? "",
-          from:      m.from ?? "",
-          text:      m.text ?? "",
-          timestamp: m.timestamp ?? "",
-        })
+        messages.push(buildRoomMessage(m as AnyObj))
       }
     }
   }

@@ -252,6 +252,12 @@ export function useParty({ llmConfig }: UsePartyOptions) {
   }, [llmConfig, partyDirective, processEvent, updateAgent, addEntry])
 
   const stopAgent = useCallback((agentId: string) => {
+    // Cancel any pending restart timer so the agent doesn't self-restart after being stopped.
+    const existingTimer = restartTimersRef.current.get(agentId)
+    if (existingTimer !== undefined) {
+      clearTimeout(existingTimer)
+      restartTimersRef.current.delete(agentId)
+    }
     const stream = streamsRef.current.get(agentId)
     if (stream) stream.stop()
     updateAgent(agentId, { status: "stopped" })
@@ -443,6 +449,11 @@ function createStreamManager() {
     async start(options: StreamStartOptions, callbacks: StreamCallbacks) {
       controller?.abort()
       controller = new AbortController()
+      // Capture this call's controller locally. The shared `controller` variable
+      // will be replaced if start() is called again before this async function
+      // exits — using the local ref prevents that replacement from making the
+      // final "did this call complete normally?" check read the wrong signal.
+      const myController = controller
 
       let doneWasCalled = false
       let saw429 = false
@@ -465,7 +476,7 @@ function createStreamManager() {
             todo: options.todo,
             partyMembers: options.partyMembers,
           }),
-          signal: controller.signal,
+          signal: myController.signal,
         })
 
         if (!res.ok || !res.body) {
@@ -524,7 +535,9 @@ function createStreamManager() {
 
       // If the stream ended without an explicit done event (e.g. MCP error closed
       // the stream early), trigger a restart so the agent doesn't silently stall.
-      if (!doneWasCalled && controller && !controller.signal.aborted) {
+      // Use myController (this call's controller) not controller (shared, may have
+      // been replaced by a newer start() call) to check whether we were aborted.
+      if (!doneWasCalled && !myController.signal.aborted) {
         callbacks.onDone(saw429 ? "rate_limited" : "end")
       }
     },

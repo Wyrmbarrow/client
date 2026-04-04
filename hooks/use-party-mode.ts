@@ -36,6 +36,7 @@ export function usePartyMode(
   agents: Map<string, AgentState>,
   focusedAgentId: string | null,
   startAgent: (agentId: string, opts?: { nudge?: string; partyMembers?: { name: string; sessionId: string; agentId: string }[] }) => void,
+  stopAgent: (agentId: string) => void,
 ): {
   partyMode: PartyModeState
   togglePartyMode: () => void
@@ -130,6 +131,12 @@ export function usePartyMode(
     setPartyMode({ status: "forming", leaderId, followerIds })
 
     try {
+      // Stop all follower loops before formation so they don't keep consuming
+      // LLM quota while the leader takes over controlling them.
+      for (const followerId of followerIds) {
+        stopAgent(followerId)
+      }
+
       const leaderSessionId = leader.sessionId
       const leaderRef = leader.roomState?.characterRefs?.find(
         (r) => r.name === leader.characterName,

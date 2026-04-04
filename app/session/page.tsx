@@ -93,6 +93,7 @@ function SessionInner({
     party.agents,
     party.focusedAgentId,
     party.startAgent,
+    party.stopAgent,
   )
 
   usePoller({

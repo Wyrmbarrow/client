@@ -31,6 +31,9 @@ export function usePoller(config: PollerConfig) {
       if (Date.now() < backoffUntil.current) return
 
       const { agents, onCharState, onPollTime, partyModeStatus, leaderId } = configRef.current
+      // Pause all polling during party state transitions to reduce MCP load
+      // while activation/deactivation calls are in-flight.
+      if (partyModeStatus === "forming" || partyModeStatus === "leaving") return
       const partyActive = partyModeStatus === "active"
 
       let stalestId: string | null = null
@@ -78,6 +81,7 @@ export function usePoller(config: PollerConfig) {
       if (Date.now() < backoffUntil.current) return
 
       const { agents, focusedAgentId, onRoomState, onPollTime, partyModeStatus, leaderId } = configRef.current
+      if (partyModeStatus === "forming" || partyModeStatus === "leaving") return
       const isPartyActive = partyModeStatus === "active"
 
       // In party mode, always poll the leader; otherwise poll the focused agent

@@ -92,7 +92,7 @@ export function useParty({ llmConfig }: UsePartyOptions) {
     characterName: string,
     bootstrap: unknown,
   ) => {
-    const agentId = characterName.toLowerCase().replace(/\s+/g, "-")
+    const agentId = crypto.randomUUID()
 
     const newAgent: AgentState = {
       agentId,

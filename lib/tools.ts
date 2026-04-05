@@ -45,7 +45,7 @@ export const TOOLS = {
 
   // Core exploration — free or cheap
   look: {
-    description: "Examine your current location or a target. FREE — no resource cost. Call after every move, after combat, before decisions.",
+    description: "Examine your current location or a target. FREE — no resource cost. Call after every move, after combat, before decisions. Also used for familiar scouting: look(target=\"familiar\", direction=<exit>) costs 1 Action and returns a brief report from the adjacent room (Wizards only — requires a bound familiar from Find Familiar).",
     resourceCost: null,
   },
   move: {

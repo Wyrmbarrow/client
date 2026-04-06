@@ -53,17 +53,49 @@ export const TOOLS = {
     resourceCost: "1 Movement",
     notes: "Leaving Melee without Disengage triggers Opportunity Attacks.",
   },
-  explore: {
-    description: "Non-combat room interactions.",
+
+  // D&D 5e-aligned action tools
+  search: {
+    description: "Make a Wisdom-based skill check. Costs 1 Action.",
     resourceCost: "1 Action",
-    actions: {
-      search:   { description: "Make a Wisdom-based skill check. Required: skill (perception, insight, medicine, or survival). Optional: target_ref to scope the check to a specific object or NPC. Perception can examine things closely. Survival can track creatures. Costs 1 Action." },
-      study:    { description: "Make an Intelligence-based skill check. Required: skill (arcana, history, investigation, nature, or religion). Optional: target_ref to scope the check. When targeting a dead body with skill='investigation', searches the body for loot — the roll affects quality and quantity of items found. Costs 1 Action." },
-      influence: { description: "Make a Charisma or Wisdom skill check to alter a creature's attitude. Required: skill (deception, intimidation, performance, persuasion, or animal_handling). Optional: target_ref to scope the check. Used for social interaction and creature handling. Costs 1 Action." },
-      utilize:  { description: "Use an object (open, take, read, use, activate). Required: target_ref. utilize_action: examine, open, take, use, or read. Use take/take_from with a searched body to loot items (optional item_id to take one specific item, omit to take all). Also works for picking up ground items. Costs 1 Action." },
-      drop:     { description: "Drop an item from inventory. Required: item_id (from character() inventory). Creates a ground object others can pick up. Despawns after 10 minutes. FREE — no resource cost." },
-      hide:     { description: "Attempt to hide. DEX (Stealth) vs Passive Perception. Costs 1 Action." },
+    parameters: {
+      skill: "One of: perception, insight, medicine, or survival",
+      target_ref: "Optional — scope the check to a specific object or NPC",
     },
+    notes: "Perception can examine things closely. Survival can track creatures.",
+  },
+  study: {
+    description: "Make an Intelligence-based skill check. Costs 1 Action.",
+    resourceCost: "1 Action",
+    parameters: {
+      skill: "One of: arcana, history, investigation, nature, or religion",
+      target_ref: "Optional — scope the check to a specific object or NPC",
+    },
+    notes: "When targeting a dead body with skill='investigation', searches the body for loot — the roll affects quality and quantity of items found.",
+  },
+  influence: {
+    description: "Make a Charisma or Wisdom skill check to alter a creature's attitude. Costs 1 Action.",
+    resourceCost: "1 Action",
+    parameters: {
+      skill: "One of: deception, intimidation, performance, persuasion (Charisma), or animal_handling (Wisdom)",
+      target_ref: "Optional — scope the check to a specific creature",
+    },
+    notes: "Used for social interaction, creature handling, and related actions.",
+  },
+  utilize: {
+    description: "Use a nonmagical object. Costs 1 Action.",
+    resourceCost: "1 Action",
+    parameters: {
+      target_ref: "Required — ref string from look() output",
+      action: "Optional — 'examine', 'open', 'take', 'use', 'read', or 'drop' (default: examine)",
+      item_id: "Optional — when looting a searched body, specify which item; omit to take all",
+    },
+    notes: "Drop action is free (no resource cost) and requires item_id.",
+  },
+  hide: {
+    description: "Make a Dexterity (Stealth) check to hide. Costs 1 Action.",
+    resourceCost: "1 Action",
+    notes: "Rolls DEX (Stealth) vs Passive Perception of creatures. While hidden: attacks against you have disadvantage, and your first attack has advantage. Stealth is broken automatically by any visible action.",
   },
 
   // Character management

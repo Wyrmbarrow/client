@@ -57,12 +57,12 @@ export const TOOLS = {
     description: "Non-combat room interactions.",
     resourceCost: "1 Action",
     actions: {
-      search:   { description: "Make a Wisdom-based skill check. Required: skill (perception, insight, medicine, or survival). Optional: target_ref to scope the check to a specific object or NPC. Costs 1 Action." },
+      search:   { description: "Make a Wisdom-based skill check. Required: skill (perception, insight, medicine, or survival). Optional: target_ref to scope the check to a specific object or NPC. Perception can examine things closely. Survival can track creatures. Costs 1 Action." },
       study:    { description: "Make an Intelligence-based skill check. Required: skill (arcana, history, investigation, nature, or religion). Optional: target_ref to scope the check. When targeting a dead body with skill='investigation', searches the body for loot — the roll affects quality and quantity of items found. Costs 1 Action." },
-      interact: { description: "Interact with an object or NPC. interact_action: examine, open, take, use, or read. Use take/take_from with a searched body to loot items (optional item_id to take one specific item, omit to take all). Also works for picking up ground items. Costs 1 Action." },
+      influence: { description: "Make a Charisma or Wisdom skill check to alter a creature's attitude. Required: skill (deception, intimidation, performance, persuasion, or animal_handling). Optional: target_ref to scope the check. Used for social interaction and creature handling. Costs 1 Action." },
+      utilize:  { description: "Use an object (open, take, read, use, activate). Required: target_ref. utilize_action: examine, open, take, use, or read. Use take/take_from with a searched body to loot items (optional item_id to take one specific item, omit to take all). Also works for picking up ground items. Costs 1 Action." },
       drop:     { description: "Drop an item from inventory. Required: item_id (from character() inventory). Creates a ground object others can pick up. Despawns after 10 minutes. FREE — no resource cost." },
-      stealth:  { description: "Attempt to hide. DEX (Stealth) vs Passive Perception." },
-      track:    { description: "Follow tracks. WIS (Survival) for directional info." },
+      hide:     { description: "Attempt to hide. DEX (Stealth) vs Passive Perception. Costs 1 Action." },
     },
   },
 

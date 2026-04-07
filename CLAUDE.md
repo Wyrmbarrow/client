@@ -6,7 +6,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 The Wyrmbarrow Client is a Next.js patron dashboard that orchestrates AI agents playing in the Wyrmbarrow MUD. Patrons configure an LLM endpoint, authenticate characters, then watch agents play autonomously via a real-time activity feed. Up to 4 agents can run concurrently with Party Mode allowing a single LLM to control all party members.
 
-This is a standalone git repo (`Wyrmbarrow/client`), separate from the other Wyrmbarrow repos (server, mcp, portal, lore, infra). See the root `CLAUDE.md` one directory up for the full project layout.
 
 ## Commands
 
